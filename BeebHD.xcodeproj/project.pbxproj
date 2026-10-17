@@ -1,0 +1,315 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+0000000000000000000001A1 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackExtras.swift; sourceTree = "<group>"; };
+000000000000000000000205 = {isa = PBXBuildFile; fileRef = 0000000000000000000001A1; };
+00000000000000000000019F = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHistory.swift; sourceTree = "<group>"; };
+000000000000000000000203 = {isa = PBXBuildFile; fileRef = 00000000000000000000019F; };
+0000000000000000000001A0 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueWatching.swift; sourceTree = "<group>"; };
+000000000000000000000204 = {isa = PBXBuildFile; fileRef = 0000000000000000000001A0; };
+00000000000000000000019E = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPolicy.swift; sourceTree = "<group>"; };
+000000000000000000000202 = {isa = PBXBuildFile; fileRef = 00000000000000000000019E; };
+00000000000000000000019D = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMP4Normalizer.swift; sourceTree = "<group>"; };
+000000000000000000000201 = {isa = PBXBuildFile; fileRef = 00000000000000000000019D; };
+00000000000000000000019C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UHDValidationView.swift; sourceTree = "<group>"; };
+000000000000000000000200 = {isa = PBXBuildFile; fileRef = 00000000000000000000019C; };
+00000000000000000000019B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UHDSetupView.swift; sourceTree = "<group>"; };
+0000000000000000000001FF = {isa = PBXBuildFile; fileRef = 00000000000000000000019B; };
+00000000000000000000019A = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UHDPlaybackAccess.swift; sourceTree = "<group>"; };
+0000000000000000000001FE = {isa = PBXBuildFile; fileRef = 00000000000000000000019A; };
+000000000000000000000199 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UHDIdentity.swift; sourceTree = "<group>"; };
+0000000000000000000001FD = {isa = PBXBuildFile; fileRef = 000000000000000000000199; };
+000000000000000000000198 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalHLSServer.swift; sourceTree = "<group>"; };
+0000000000000000000001FC = {isa = PBXBuildFile; fileRef = 000000000000000000000198; };
+000000000000000000000197 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DASHManifest.swift; sourceTree = "<group>"; };
+0000000000000000000001FB = {isa = PBXBuildFile; fileRef = 000000000000000000000197; };
+000000000000000000000196 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UHDService.swift; sourceTree = "<group>"; };
+0000000000000000000001FA = {isa = PBXBuildFile; fileRef = 000000000000000000000196; };
+000000000000000000000195 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Library.swift; sourceTree = "<group>"; };
+0000000000000000000001F9 = {isa = PBXBuildFile; fileRef = 000000000000000000000195; };
+000000000000000000000194 = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+0000000000000000000001F8 = {isa = PBXBuildFile; fileRef = 000000000000000000000194; };
+000000000000000000000193 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Discovery.swift; sourceTree = "<group>"; };
+0000000000000000000001F7 = {isa = PBXBuildFile; fileRef = 000000000000000000000193; };
+000000000000000000000192 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogueViews.swift; sourceTree = "<group>"; };
+0000000000000000000001F6 = { isa = PBXBuildFile; fileRef = 000000000000000000000192; };
+000000000000000000000191 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogueStore.swift; sourceTree = "<group>"; };
+0000000000000000000001F5 = { isa = PBXBuildFile; fileRef = 000000000000000000000191; };
+000000000000000000000190 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Catalogue.swift; sourceTree = "<group>"; };
+0000000000000000000001F4 = { isa = PBXBuildFile; fileRef = 000000000000000000000190; };
+
+/* Begin PBXBuildFile section */
+		0000000000000000000000C8 /* BeebHDApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000003E8 /* BeebHDApp.swift */; };
+		0000000000000000000000C9 /* BBCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000003E9 /* BBCService.swift */; };
+		0000000000000000000000CA /* Playback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000003EA /* Playback.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000000000000000000000006 /* BeebHD.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BeebHD.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0000000000000000000003E8 /* BeebHDApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeebHDApp.swift; sourceTree = "<group>"; };
+		0000000000000000000003E9 /* BBCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BBCService.swift; sourceTree = "<group>"; };
+		0000000000000000000003EA /* Playback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Playback.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		000000000000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000003 /* BeebHD */,
+				000000000000000000000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000003 /* BeebHD */ = {
+			isa = PBXGroup;
+			children = (
+                000000000000000000000190,
+                000000000000000000000193,
+                000000000000000000000195,
+                000000000000000000000196,
+                00000000000000000000019F,
+                0000000000000000000001A1,
+0000000000000000000001A0,
+                00000000000000000000019E,
+                00000000000000000000019D,
+                00000000000000000000019C,
+                00000000000000000000019B,
+                00000000000000000000019A,
+                000000000000000000000199,
+                000000000000000000000198,
+                000000000000000000000197,
+                000000000000000000000194,
+                000000000000000000000191,
+                000000000000000000000192,
+				0000000000000000000003E8 /* BeebHDApp.swift */,
+				0000000000000000000003E9 /* BBCService.swift */,
+				0000000000000000000003EA /* Playback.swift */,
+			);
+			path = BeebHD;
+			sourceTree = "<group>";
+		};
+		000000000000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000006 /* BeebHD.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000000000000000000000005 /* BeebHD */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00000000000000000000000B /* Build configuration list for PBXNativeTarget "BeebHD" */;
+			buildPhases = (
+				000000000000000000000007 /* Sources */,
+				000000000000000000000008 /* Frameworks */,
+				000000000000000000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BeebHD;
+			productName = BeebHD;
+			productReference = 000000000000000000000006 /* BeebHD.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = 00000000000000000000000A /* Build configuration list for PBXProject "BeebHD" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000000000000000000000002;
+			productRefGroup = 000000000000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000000000000000000000005 /* BeebHD */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		000000000000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+                0000000000000000000001F8,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+                0000000000000000000001F4,
+                0000000000000000000001F7,
+                0000000000000000000001F9,
+                0000000000000000000001FA,
+                000000000000000000000203,
+                000000000000000000000205,
+000000000000000000000204,
+                000000000000000000000202,
+                000000000000000000000201,
+                000000000000000000000200,
+                0000000000000000000001FF,
+                0000000000000000000001FE,
+                0000000000000000000001FD,
+                0000000000000000000001FC,
+                0000000000000000000001FB,
+                0000000000000000000001F5,
+                0000000000000000000001F6,
+				0000000000000000000000C8 /* BeebHDApp.swift in Sources */,
+				0000000000000000000000C9 /* BBCService.swift in Sources */,
+				0000000000000000000000CA /* Playback.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		000000000000000000000065 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				SDKROOT = appletvos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+                SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_VERSION = 5.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Debug;
+		};
+		000000000000000000000066 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SDKROOT = appletvos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Release;
+		};
+		00000000000000000000006F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+                CODE_SIGN_ENTITLEMENTS = BeebHD/BeebHD.entitlements;
+				CURRENT_PROJECT_VERSION = 11;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = BeebHD/Info.plist;
+                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleDisplayName = "Beeb";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.8.2;
+				PRODUCT_BUNDLE_IDENTIFIER = org.beebplayer.Beeb;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+                SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Debug;
+		};
+		000000000000000000000070 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+                CODE_SIGN_ENTITLEMENTS = BeebHD/BeebHD.entitlements;
+				CURRENT_PROJECT_VERSION = 11;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = BeebHD/Info.plist;
+                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleDisplayName = "Beeb";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.8.2;
+				PRODUCT_BUNDLE_IDENTIFIER = org.beebplayer.Beeb;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		00000000000000000000000A /* Build configuration list for PBXProject "BeebHD" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000065 /* Debug */,
+				000000000000000000000066 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		00000000000000000000000B /* Build configuration list for PBXNativeTarget "BeebHD" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00000000000000000000006F /* Debug */,
+				000000000000000000000070 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 000000000000000000000001 /* Project object */;
+}
