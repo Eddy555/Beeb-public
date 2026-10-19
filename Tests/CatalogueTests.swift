@@ -41,7 +41,7 @@ actor RequestLog {
         let page = try await discovery.page(category:"comedy",page:2)
         let pageCalls = await discoveryLog.count()
         check(page.page==2 && pageCalls==1,"Browsing fetches one page, never the entire category or catalogue")
-        let fakeEpisode: [String:Any] = ["id":"p0000001","tleo":["id":"b0000001"],"title":["default":"Example"],"subtitle":["default":"Series 1: Episode 1"],"image":["default":"https://example.com/{recipe}/x.jpg", "promotional": "https://example.com/{recipe}/plain.jpg", "promotionalWithLogo": "https://example.com/{recipe}/logo.jpg"],"synopsis":["small":"A story with } and \\\" braces"]]
+        let fakeEpisode: [String:Any] = ["id":"p0000001","tleo":["id":"b0000001"],"title":["default":"Example"],"subtitle":["default":"Series 1: Episode 1"],"image":["default":"https://example.com/{recipe}/x.jpg", "promotional": "https://example.com/{recipe}/plain.jpg", "promotionalWithLogo": "https://example.com/{recipe}/logo.jpg", "portrait": "https://example.com/{recipe}/poster.jpg"],"synopsis":["small":"A story with } and \\\" braces"]]
         let bundle: (String,String)->[String:Any] = { ["id":$0,"title":["default":$1],"entities":[["episode":fakeEpisode]]] }
         let state = try JSONSerialization.data(withJSONObject:["bundles":[bundle("editorial","New & Trending"),bundle("popular","Most Popular Today")]])
         let html = Data(("<script>window.__IPLAYER_REDUX_STATE__ = "+String(decoding:state,as:UTF8.self)+";</script>").utf8)
@@ -50,6 +50,10 @@ actor RequestLog {
         check(home.features.first?.image?.absoluteString.contains("1920x1080")==true,"Banner uses widescreen high-resolution image recipe")
         check(home.features.first?.image?.lastPathComponent == "plain.jpg", "Homepage banner prefers artwork without a logo")
         check(home.rows.first?.shows.first?.image?.lastPathComponent == "logo.jpg", "Show cards retain programme logo artwork independently of banner")
+        check(home.rows.first?.shows.first?.portraitImage?.absoluteString == "https://example.com/640x960/poster.jpg", "Homepage keeps true portrait artwork independently of landscape cards")
+        check(HomeRow(id: "other", title: "Stream Every Episode", shows: []).usesPosters, "Poster row follows editorial title rather than an unstable BBC bundle ID")
+        let legacy = try JSONDecoder().decode(CatalogueShow.self, from: JSONEncoder().encode(show))
+        check(legacy.portraitImage == nil, "Older cached shows without portrait artwork remain readable")
         let fallbackCases: [([String: String], String?)] = [(["default": "https://example.org/{recipe}/still.jpg"], "still.jpg"), (["promotionalWithLogo": "https://example.org/logo.jpg"], nil)]
         for (images, expected) in fallbackCases {
             var entry = fakeEpisode; entry["image"] = images

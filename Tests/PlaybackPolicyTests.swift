@@ -25,7 +25,7 @@ import Foundation
             _ = try await PlaybackPolicy.bestSource(uhd: nil, hd: { throw BBCError.message("HD unavailable") })
             fatalError("Missing fallback error")
         } catch let error as BBCError { precondition(error.localizedDescription == "HD unavailable") }
-        for (height, range, label) in [(2160,"HLG","4K HDR"),(2160,"PQ","4K HDR"),(2160,"SDR","4K"),(1080,"SDR","Full HD"),(720,"SDR","HD"),(576,"SDR","SD"),(480,"SDR","SD")] {
+        for (height, range, label) in [(2160,"HLG","4K"),(2160,"PQ","4K"),(2160,"SDR","4K"),(1080,"SDR","FHD"),(720,"SDR","HD"),(576,"SDR","SD"),(480,"SDR","SD")] {
             precondition(PlaybackPolicy.badge(height: height, videoRange: range) == label, "Received quality badge")
         }
         precondition(PlaybackPolicy.badge(height: 0, videoRange: "HLG") == nil, "Do not show a requested quality as received")

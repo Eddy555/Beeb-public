@@ -1,4 +1,6 @@
 import Foundation
+import AVFoundation
+import ImageIO
 func check(_ condition: @autoclosure () -> Bool, _ message: String) { precondition(condition(), message) }
 @main struct PlaybackExtrasTests {
     static func main() async throws {
@@ -19,6 +21,30 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) { preconditi
         check(!markers[0].contains(0.99) && markers[0].contains(1) && markers[0].contains(84.99) && !markers[0].contains(85), "Exact visibility boundaries")
         let unmatched = try await api.markers(episodeID: programme.id, versionID: "m00304fz")
         check(unmatched.isEmpty, "Never borrow timestamps from another version")
+        var info = Programme(id: "p0000001", title: "A film", summary: "Full episode synopsis.", image: nil, version: "", guidance: "Contains strong language.")
+        info.durationText = "58 mins"; info.firstBroadcast = "1 Mar 2022"; info.firstBroadcastDateTime = "2022-03-01T00:00:00.000Z"
+        let artwork = Data([1, 2, 3])
+        let metadata = PlaybackInfoMetadata.items(title: "A film", subtitle: "Episode 1", programme: info, artwork: artwork)
+        let description = try await metadata.first { $0.identifier == .commonIdentifierDescription }?.load(.stringValue) ?? ""
+        check(description == "Full episode synopsis.\n\nContains strong language.", "Native Info synopsis excludes duplicated runtime/date while retaining guidance")
+        let artworkValue = try await metadata.first { $0.identifier == .commonIdentifierArtwork }?.load(.dataValue)
+        check(artworkValue == artwork, "Native artwork metadata retains thumbnail bytes")
+        let releaseValue = try await metadata.first { $0.identifier == .iTunesMetadataReleaseDate }?.load(.stringValue)
+        check(releaseValue == info.firstBroadcastDateTime, "Native release metadata uses BBC first broadcast date")
+        let png = try Data(contentsOf: URL(fileURLWithPath: "BeebHD/Assets.xcassets/BrandLogo.imageset/logo.png"))
+        let resized = PlaybackInfoArtwork.jpeg(from: png)
+        check(resized != nil && PlaybackInfoArtwork.jpeg(from: Data("not an image".utf8)) == nil, "Info artwork safely decodes PNG and rejects invalid input")
+        let imageSource = CGImageSourceCreateWithData(resized! as CFData, nil)!
+        let dimensions = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any]
+        check((dimensions?[kCGImagePropertyPixelWidth] as? Int ?? 9999) <= 960 && (dimensions?[kCGImagePropertyPixelHeight] as? Int ?? 9999) <= 960, "Info artwork is bounded before native rendering")
+        let emptyInfo = PlaybackInfoMetadata.items(title: "Live", subtitle: "BBC Two")
+        check(emptyInfo.count == 2, "Missing optional metadata produces no empty or fabricated Info fields")
+        let rawInfo: [String: Any] = ["id": "p0000001", "title": "Example", "synopses": ["small": "Short", "large": "Full synopsis"], "release_date_time": "2026-10-18T00:00:00Z", "versions": [["id": "b0000001", "kind": "original", "first_broadcast": "1 Mar 2022", "first_broadcast_date_time": "2022-03-01T00:00:00.000Z"]]]
+        let parsedInfo = try CatalogueAPI.episode(rawInfo).programme
+        check(parsedInfo.summary == "Full synopsis" && parsedInfo.firstBroadcast == "1 Mar 2022", "Episode parsing prefers full synopsis and original broadcast over catalogue re-release date")
+        let legacyInfo = Data(#"{"id":"p0000001","title":"Legacy","summary":"Old","version":"","image":null,"guidance":null}"#.utf8)
+        let legacyProgramme = try JSONDecoder().decode(Programme.self, from: legacyInfo)
+        check(legacyProgramme.firstBroadcast == nil, "Legacy cached programmes remain decodable without original-date fields")
         let ttml = Data("""
         <tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttp="http://www.w3.org/ns/ttml#parameter" ttp:frameRate="25"><head><metadata>Do not show this</metadata></head><body><div begin="2s"><p begin="00:00:01.500" end="00:00:03"><span>Hello &amp; welcome</span><br/><span>Second line</span></p><p begin="4s" dur="2s">Next</p><p begin="10s" end="9s">Invalid</p><p begin="00:00:08:12" dur="25f">Frames</p></div></body></tt>
         """.utf8)
@@ -68,6 +94,6 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) { preconditi
             check(real.count > 100 && real[0].start == 5 && real[0].text == "Welcome to The Americas...", "Real BBC caption file")
             print("Real BBC TTML: \(real.count) cues parsed")
         }
-        print("PASS: version-specific skip markers, HDR/duration, TTML timing and seeking, caption discovery, live schedule boundaries")
+        print("PASS: native Info metadata/artwork/original date, legacy decoding, version-specific skip markers, HDR/duration, TTML timing and seeking, caption discovery, live schedule boundaries")
     }
 }
