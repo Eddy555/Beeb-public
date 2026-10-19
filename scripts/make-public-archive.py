@@ -3,6 +3,7 @@
 import importlib.util
 from pathlib import Path
 import sys
+import re
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +15,12 @@ spec.loader.exec_module(check)
 def main():
     if check.main():
         return 1
-    destination = ROOT / 'dist/Beeb-0.8.2-public-source.zip'
+    project = (ROOT / 'BeebHD.xcodeproj/project.pbxproj').read_text()
+    versions = set(re.findall(r'MARKETING_VERSION = ([0-9.]+);', project))
+    if len(versions) != 1:
+        raise SystemExit('App and extension must have one matching release version.')
+    version = versions.pop()
+    destination = ROOT / f'dist/Beeb-{version}-public-source.zip'
     destination.parent.mkdir(exist_ok=True)
     with zipfile.ZipFile(destination, 'w', zipfile.ZIP_DEFLATED) as archive:
         for path in check.source_files():

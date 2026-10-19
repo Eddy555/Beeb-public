@@ -22,7 +22,7 @@ def inspect(path):
             parts = PurePosixPath(name).parts
             if name.startswith('/') or '..' in parts:
                 failures.append('Unsafe archive path.')
-            if '_CodeSignature' in parts or name.endswith(('.mobileprovision', '.provisionprofile', '.p12', '.pfx', '.pem', '.key', '.dSYM')) or '__MACOSX' in parts:
+            if '_CodeSignature' in parts or name.endswith(('.mobileprovision', '.provisionprofile', '.p12', '.pfx', '.pem', '.key', '.dSYM')) or '__MACOSX' in parts or any(part.startswith('._') or part == '.DS_Store' for part in parts):
                 failures.append('Signing material or platform metadata present.')
             data = archive.read(item)
             patterns = [rb'/(?:Users|home)/[A-Za-z0-9_.-]+/',
