@@ -9,7 +9,7 @@ mkdir -p "$build_dir"
 build_dir="$(cd "$build_dir" && pwd)"
 args=(-project BeebHD.xcodeproj -scheme BeebHD -configuration Release -destination 'generic/platform=tvOS' -derivedDataPath "$build_dir/DerivedData")
 if [[ -n "${BEEB_BUNDLE_ID:-}" ]]; then
-    args+=("PRODUCT_BUNDLE_IDENTIFIER=$BEEB_BUNDLE_ID")
+    args+=("BEEB_APP_BUNDLE_IDENTIFIER=$BEEB_BUNDLE_ID")
 fi
 if [[ -n "${APPLE_TEAM_ID:-}" ]]; then
     if [[ -z "${BEEB_BUNDLE_ID:-}" ]]; then
@@ -25,6 +25,7 @@ else
     trap 'rm -rf "$stage"' EXIT
     mkdir -p "$stage/Payload"
     cp -R "$build_dir/DerivedData/Build/Products/Release-appletvos/BeebHD.app" "$stage/Payload/"
-    (cd "$stage" && /usr/bin/zip -qry "$build_dir/BeebHD-unsigned.ipa" Payload)
+    rm -f "$build_dir/BeebHD-unsigned.ipa"
+    (cd "$stage" && COPYFILE_DISABLE=1 /usr/bin/zip -Xqry "$build_dir/BeebHD-unsigned.ipa" Payload -x '*/._*' '*/.DS_Store' '__MACOSX/*')
     echo "Unsigned build (must be signed before installation): $build_dir/BeebHD-unsigned.ipa"
 fi

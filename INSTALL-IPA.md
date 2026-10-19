@@ -1,6 +1,6 @@
 # Install the unsigned IPA
 
-The prebuilt **Beeb-0.8.2-public-unsigned.ipa** is for physical Apple TV devices running tvOS 17+. It contains no developer signature or provisioning profile. **You must sign it with your own Apple account before installation.** It is not a one-click Apple TV download or an App Store/TestFlight build.
+The prebuilt **Beeb-0.10.7-public-unsigned.ipa** is for physical Apple TV devices running tvOS 17+. It contains no developer signature or provisioning profile. **You must sign it with your own Apple account before installation.** It is not a one-click Apple TV download or an App Store/TestFlight build.
 
 Download the IPA from **[GitHub Releases](https://github.com/usefulappmaker/Beeb-public/releases/latest)** alongside the matching public source ZIP. Source ZIPs intentionally exclude binaries. Both routes install the same public app functionality; [INSTALL.md](INSTALL.md) remains the recommended fully source-based route.
 
@@ -16,16 +16,22 @@ Download the IPA from **[GitHub Releases](https://github.com/usefulappmaker/Beeb
 Download the unsigned IPA and its SHA-256 file from the same release as the public source. Verify the checksum in Terminal from that download folder:
 
 ```sh
-shasum -a 256 -c Beeb-0.8.2-public-unsigned.sha256
+shasum -a 256 -c Beeb-0.10.7-public-unsigned.sha256
 ```
 
 For an additional structural check, with the source folder available:
 
 ```sh
-python3 scripts/check-unsigned-ipa.py /path/to/Beeb-0.8.2-public-unsigned.ipa
+python3 scripts/check-unsigned-ipa.py /path/to/Beeb-0.10.7-public-unsigned.ipa
 ```
 
 Replace the example path. The checker verifies a public-template arm64 tvOS app without a code signature/profile and scans for common personal-path/key markers. It is not a complete secret scanner or a signing tool.
+
+## Top Shelf extension signing
+
+This release includes `PlugIns/BeebTopShelf.appex`. Your signing tool must sign both the app and this extension, preserving distinct identifiers: for example `com.youralias.Beeb` and `com.youralias.Beeb.TopShelf`. Each bundle needs provisioning that permits its own identifier and your Apple TV. One explicit app-only profile does not automatically cover the extension. If your third-party signer cannot handle nested tvOS extensions, use the Xcode source-install route, which manages both targets.
+
+Keep the extension in the IPA to retain the one-click live channel cards. This release uses no App Group. After installation, move Beeb to the top row of the Apple TV home screen, select its icon and press Up to reach the channel cards.
 
 ## 2. Prepare signing for your device
 
@@ -34,7 +40,7 @@ If you already have a valid tvOS profile and its matching certificate/private ke
 1. Add your own account under **Xcode → Settings → Accounts**.
 2. Create a small temporary **tvOS App** project in Xcode. Select your team and automatic signing. Choose a unique identifier you will use for Beeb, for example `com.youralias.Beeb`, replacing `youralias`.
 3. Pair your Apple TV using the network-pairing instructions in [INSTALL.md](INSTALL.md). Select that physical TV as the destination.
-4. Let Xcode generate its signing profile; Run the temporary project if necessary to finish device provisioning. This prepares your signing setup without compiling Beeb itself. Keep the selected team and identifier for the next step.
+4. Let Xcode generate its signing profile; Run the temporary project if necessary to finish device provisioning. For Top Shelf, also create/provision a tvOS Top Shelf extension target with the matching `.TopShelf` identifier. Alternatively open the supplied Beeb project and let Xcode manage both targets, as described in INSTALL.md. This prepares the app and extension signing setup. Keep the selected team and identifier for the next step.
 
 Use a tvOS profile, not an iPhone profile. Free Personal Team profiles are short-lived and require renewal. Never send your Apple password, signing private key or device profile to the project maintainer.
 

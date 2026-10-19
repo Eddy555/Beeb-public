@@ -1,6 +1,14 @@
 # Public edition verification
 
-## Passed
+## Current release: 0.10.7 (28)
+
+- Unsigned physical-device tvOS Release build passed; the app and Top Shelf extension both use version 0.10.7 (28), with distinct public bundle identifiers.
+- Both executables are arm64 and contain no code-signature load command. The IPA contains no provisioning profiles, AppleDouble entries or detected private account paths/key markers. Archive integrity and SHA-256 verification passed.
+- Original sectioned Top Shelf provider restored; purple-background prototype excluded. Regional feed preferences remain active when a channel starts.
+- Latest simulator checks cover Info dismissal and immediate second-Back exit, speed selection, regional settings, and Reduce Loud Sounds selection persistence. Enhance Dialogue was not available in that simulator and is not claimed as a new feature.
+- Source privacy/release checks and matching-source packaging are required before publication. No new physical-device installation of 0.10.7 is claimed.
+
+## Historical 0.8.2 preparation checks
 
 - Known private-installer names, account/team/certificate identifiers, original bundle namespace and absolute account paths absent from the public source tree in the preparation audit.
 - Source-only release checker: no selected signing team, prohibited artefact types, local account paths, detected key/token patterns, symlinks or unreviewed PNG metadata.
@@ -28,7 +36,7 @@
 ## Unsigned prebuilt release
 
 - Release build from a clean temporary source directory succeeded with code signing disabled, using the public template bundle identifier.
-- The supplied unsigned IPA contains only the tvOS app's executable, asset catalogue, Info.plist and PkgInfo. No provisioning profile, code signature, signing certificate or bundled UHD identity is supplied.
+- The initial 0.8.2 unsigned IPA contained the main tvOS app without a Top Shelf extension. The current release also includes the unsigned Top Shelf extension described above. No provisioning profile, code signature, signing certificate or bundled UHD identity is supplied.
 - codesign confirmed the app is not signed; executable load commands contain no code signature. The app targets physical arm64 Apple TV devices, with tvOS 17 minimum deployment.
 - All payload files were scanned for the original installer's known personal names, account/team/certificate identifiers, original private bundle ID and personal account paths: no matches found. ZIP metadata uses neutral timestamps and no owner extras.
 - SHA-256 accompanies the IPA. Matching source is supplied separately under the project licence. The unsigned IPA has not been installed directly, because normal Apple TV installation requires signing first.

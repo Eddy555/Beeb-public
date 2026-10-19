@@ -26,8 +26,8 @@ Open `BeebHD.xcodeproj` in Xcode. Allow Xcode to finish any first-launch setup a
 1. Open **Xcode → Settings → Accounts** and add your own Apple account. Never send credentials or verification codes to a project maintainer.
 2. Select the blue project icon in the navigator, then the **BeebHD target** (not just the project).
 3. Open **Signing & Capabilities**. Enable **Automatically manage signing**.
-4. Choose your own **Team**. The public source intentionally leaves this blank.
-5. Change **Bundle Identifier** from `org.beebplayer.Beeb` to a unique reverse-domain-style value you control, such as `com.youralias.Beeb`. The example is a placeholder; replace `youralias`. Apply the same identifier/team to Debug and Release if Xcode displays separate configurations.
+4. Choose your own **Team** for both the **BeebHD** and **BeebTopShelf** targets. The public source intentionally leaves this blank.
+5. In the project’s **Build Settings**, change **BEEB_APP_BUNDLE_IDENTIFIER** from `org.beebplayer.Beeb` to a unique value such as `com.youralias.Beeb` for Debug and Release. This updates both the app identifier and its `.TopShelf` extension identifier. Do not give the extension the same identifier as the main app.
 6. Leave the existing app-specific Keychain entitlement in place. It uses the signing prefix and bundle identifier of your build, not a maintainer's team.
 
 If Xcode says an identifier is unavailable, choose another unique identifier. If your account cannot provision a capability, read the exact signing error and account limitations; no maintainer's profile can fix provisioning for your own device.

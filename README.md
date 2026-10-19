@@ -16,21 +16,29 @@ This is an unofficial project, not produced or endorsed by the BBC. Choose **sou
 
 *Screenshots are from the [original Reddit announcement](https://www.reddit.com/r/iplayer/comments/1x7kzsi/i_built_beeb_an_unofficial_apple_tv_bbc_player/). They show an earlier build; the current public version uses homepage banners without logos and episode-specific thumbnails where available.*
 
+**Current prepared release: 0.10.7 (build 28).** See [changes since 0.8.2](CHANGELOG.md).
+
 ## What Beeb can do
 
 | Feature | How it works |
 | --- | --- |
 | **4K HLG HDR playback** | Plays compatible BBC UHD episodes using the original encoded video, audio and HLG metadata. Requires Apple TV 4K, a compatible display connection and optional TwinVine setup. |
 | **Automatic quality selection** | The pink logo Play button tries compatible UHD first, then the best available HD/SD stream if UHD is unavailable or not configured. |
+| **Programme Info** | The Info button shows the title, episode subtitle, programme thumbnail, full synopsis, running time, original BBC broadcast date and guidance where supplied. A bounded description layout avoids a tvOS native-summary crash. Back hides Info or player controls; a second press exits playback immediately. |
+| **Playback speed** | Native on-demand speed menu beside Info, with 0.5×, 0.75×, 1×, 1.25×, 1.5× and 2× options. Live channels keep normal speed. |
+| **Regional channels** | Settings offers 16 BBC One regions and three BBC Two feeds. The chosen feed plays from Live or a Top Shelf channel card. Top Shelf artwork uses the default channel schedule. |
 | **Native English subtitles** | BBC TTML captions become a proper HLS WebVTT track. Apple's player handles rendering, Off/English selection and subtitle appearance. |
 | **Subtitles after skipping back** | With Apple's **Show on Skip Back** setting enabled on supported tvOS versions, skipping back 10 seconds can temporarily show captions. This behaviour has been checked on Apple TV. |
 | **Skip intro and recap** | Native contextual buttons use BBC-supplied timings matched to the version actually playing. Buttons appear only during a supplied skip interval. |
-| **Received-quality badge** | Shows 4K HDR, 4K, Full HD, HD or SD according to the received picture. The 4K HDR label requires 2160p video and HLG/PQ source signalling. |
+| **Received-quality badge** | Shows an outlined 4K, FHD, HD or SD badge beside the episode metadata in the playback controls. The 4K label requires a received picture of at least 2160p; it does not infer HDR from BBC catalogue flags. |
+| **4K UHD category** | A saved UHD listing is available immediately. Beeb refreshes BBC’s UHD webpage daily, keeps cached discoveries, and checks episode-level availability when you open a programme. No full-catalogue episode scan. |
+| **Search** | Search the full cached BBC programme catalogue by title and synopsis using the native Apple TV keyboard, iPhone keyboard or Siri Remote dictation where supported. |
 | **Continue Watching and Up next** | Saves progress locally across launches. Resume an episode, start over, remove a show from the row or open the next episode after completion. |
 | **Programme discovery** | Featured programmes, categories, A–Z browsing, series selectors and ordered episode lists. Episode pages load when needed rather than indexing the whole catalogue at launch. |
 | **Saved programmes** | Bookmark a show and open its current available episodes later. |
+| **Live channels on Top Shelf** | Move Beeb to the home screen’s top row, press Up to its landscape channel cards, then Select to start that channel directly. Play/Pause starts it too. Current programme artwork is cached, with a channel card fallback. |
 | **Live television** | BBC channel tiles show the scheduled programme's title and artwork. Live quality and subtitles depend on the supplied feed. |
-| **Artwork suited to each view** | Plain promotional images for homepage banners, individual episode stills for episode cards, and programme artwork for show listings. |
+| **Artwork suited to each view** | Plain promotional images for homepage banners, individual episode stills for episode cards, programme artwork for show listings, and clickable portrait-only posters in Stream Every Episode. Larger homepage cards omit redundant action text. |
 
 ## Screenshots
 
@@ -54,7 +62,7 @@ This is an unofficial project, not produced or endorsed by the BBC. Choose **sou
 ### Choose your download
 
 - **Public source ZIP:** build and sign through Xcode using the steps below.
-- **Beeb-0.8.2-public-unsigned.ipa:** a prebuilt arm64 tvOS app, intended as a separate GitHub Release asset with a SHA-256 file. **Requires your own signing before installation.** Follow [the IPA signing/install guide](INSTALL-IPA.md). It contains no provisioning profile, developer signature or UHD identity.
+- **Beeb-0.10.7-public-unsigned.ipa:** a prebuilt arm64 tvOS app, intended as a separate GitHub Release asset with a SHA-256 file. **Requires your own signing before installation.** Follow [the IPA signing/install guide](INSTALL-IPA.md). It contains no provisioning profile, developer signature or UHD identity.
 
 Download the **[unsigned IPA and matching source ZIP from GitHub Releases](https://github.com/usefulappmaker/Beeb-public/releases/latest)**. The source ZIP intentionally excludes compiled binaries; the IPA is a separate release download.
 
@@ -71,8 +79,8 @@ Download the **[unsigned IPA and matching source ZIP from GitHub Releases](https
 
 1. On this repository's GitHub page choose **Code → Download ZIP**, then extract it. Open **BeebHD.xcodeproj** in Xcode.
 2. In **Xcode → Settings → Accounts**, add your own Apple account.
-3. Select the **BeebHD target → Signing & Capabilities**. Enable **Automatically manage signing** and choose your own **Team**. The public project intentionally has no team selected.
-4. Replace the template bundle identifier, `org.beebplayer.Beeb`, with your own unique value, such as `com.youralias.Beeb`. Replace `youralias`; use the same identifier/team in Debug and Release. Leave the app-specific Keychain entitlement in place.
+3. Select **Signing & Capabilities** for both **BeebHD** and **BeebTopShelf**, enable **Automatically manage signing**, and choose your own **Team**. The public project intentionally has no team selected.
+4. In the project’s **Build Settings**, set the user-defined **BEEB_APP_BUNDLE_IDENTIFIER** to your own unique value, such as `com.youralias.Beeb`, for Debug and Release. This sets the app identifier and the matching `.TopShelf` extension identifier together. Leave the app-specific Keychain entitlement in place.
 5. On Apple TV open **Settings → Remotes and Devices → Remote App and Devices**. In newer Xcode, use **Xcode → Open Developer Tool → Device Hub → Pair Nearby Device → Apple TV**. In older Xcode use **Window → Devices and Simulators → Devices**. Select the TV and enter its displayed pairing code.
 6. Choose the **BeebHD scheme** and your **physical Apple TV** as the run destination, then press **Command-R**. Xcode builds, signs, installs and launches **Beeb**.
 7. Open an available programme and press the pink Play logo. Confirm HD playback works before adding UHD setup.
@@ -142,9 +150,19 @@ The transfer uses pinned TLS. Beeb retains the setup package and metadata in dev
 
 ### 5. Check UHD playback
 
-Choose a currently available UHD-listed episode and press Play. Show the player controls and check for **4K HDR**. A catalogue badge describes advertised availability; the playback badge reflects the received stream. If UHD is unavailable or your identity is not accepted, Beeb can fall back to HD.
+Choose a currently available UHD-listed episode and press Play. Show the player controls and check for **4K**. A catalogue badge describes advertised availability; the playback badge reflects the received stream. If UHD is unavailable or your identity is not accepted, Beeb can fall back to HD.
 
 For local-network/interface problems, explicit config paths, expired links and identity renewal, follow [SETUP-UHD.md](SETUP-UHD.md) and [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+## Catalogue updates and 4K browsing
+
+Open **Browse → Categories → 4K UHD** to see programmes with UHD-listed episodes. Opening a programme from this category selects a season with UHD episodes when available, while showing every episode in the season. Individual 4K episodes have a badge. The received playback quality can still fall back to HD if UHD is unavailable or your setup is not accepted.
+
+The app includes a public metadata snapshot so 4K browsing and Search work immediately. While Beeb is open, the UHD index refreshes once daily from the [BBC’s UHD programme page](https://www.bbc.co.uk/iplayer/help/questions/programme-availability/uhd-content). This downloads one webpage, merges its programme links with saved UHD discoveries, and caches the result. Beeb no longer scans every programme’s episode lists in the background. Individual episode availability is checked when you open a programme, and UHD discoveries made during normal browsing are saved automatically. No Mac or hosted indexing service is required.
+
+Search covers the full cached A–Z programme catalogue, including films, rather than just viewed programmes. Its separate daily refresh downloads programme listing pages without fetching each programme’s episodes. Results match programme titles and synopses; this is not a full-text search of every individual episode subtitle. Dictation and the iPhone keyboard depend on the Apple TV’s system settings and remote/device support.
+
+**Check for updates** in the UHD category refreshes the BBC UHD webpage. Failed updates retain saved listings and retry later. Refresh timestamps are stored internally; the category keeps its interface minimal. This is an editorial index plus cached discoveries, so it is not guaranteed exhaustive or a promise that every episode is currently UHD. BBC metadata, regional availability and live UHD events can differ from the on-demand catalogue. Actual 4K/HDR delivery is checked during playback, and no TwinVine credentials are part of the catalogue cache or bundled snapshot.
 
 ## How playback works
 
