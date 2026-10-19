@@ -9,7 +9,10 @@ struct HomeFeature: Codable, Identifiable {
     let image: URL?
     var id: String { show.id }
 }
-struct HomeRow: Codable, Identifiable { let id: String; let title: String; let shows: [CatalogueShow] }
+struct HomeRow: Codable, Identifiable {
+    let id: String; let title: String; let shows: [CatalogueShow]
+    var usesPosters: Bool { title.localizedCaseInsensitiveCompare("Stream Every Episode") == .orderedSame }
+}
 struct HomeFeed: Codable { let features: [HomeFeature]; let rows: [HomeRow] }
 struct LiveProgramme: Codable, Hashable {
     let title: String
@@ -66,8 +69,9 @@ struct DiscoveryAPI {
                 let title = text(e["title"], ["default", "editorial"])
                 let summary = text(e["synopsis"], ["programmeSmall", "small", "editorial"])
                 let image = CatalogueAPI.image(text(e["image"], ["promotionalWithLogo", "default", "promotional"]))
-                let show = CatalogueShow(id: showID, title: title, summary: summary, image: image, letter: "", channel: "BBC",
+                var show = CatalogueShow(id: showID, title: title, summary: summary, image: image, letter: "", channel: "BBC",
                     categories: [], expectedEpisodes: showID == episodeID ? 1 : 0, singleEpisode: showID == episodeID, episodes: [], indexedAt: nil)
+                show.portraitImage = CatalogueAPI.portraitImage(e["image"])
                 shows.append(show)
                 let plainArtwork = text(e["image"], ["promotional", "default"])
                 let large = plainArtwork.replacingOccurrences(of: "{recipe}", with: "1920x1080")
@@ -129,7 +133,7 @@ struct DiscoveryAPI {
         guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any], let values = root["channels"] as? [[String: Any]] else { throw BBCError.message("Live channels could not be loaded.") }
         return values.compactMap { v in
             guard v["has_schedule"] as? Bool == true, let id = v["id"] as? String, let title = v["title"] as? String else { return nil }
-            return LiveChannel(id: id, title: title)
+            return RegionalChannels.resolve(LiveChannel(id: id, title: title))
         }
     }
     static func currentBroadcast(_ data: Data, now: Date = Date()) throws -> LiveProgramme? {
@@ -194,5 +198,15 @@ actor DiscoveryCache {
     func write<T: Encodable>(_ value: T, key: String) throws {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try JSONEncoder().encode(value).write(to: folder.appendingPathComponent(key + ".json"), options: .atomic)
+    }
+}
+
+extension RegionalChannels {
+    static func resolve(_ channel: LiveChannel, defaults: UserDefaults = .standard) -> LiveChannel {
+        let id = selectedID(for: channel.id, defaults: defaults)
+        guard id != channel.id else { return channel }
+        let choice = (bbcOne + bbcTwo).first { $0.id == id }
+        let name = id.hasPrefix("bbc_one") ? "BBC One" : "BBC Two"
+        return LiveChannel(id: id, title: "\(name) \(choice?.title ?? "")")
     }
 }

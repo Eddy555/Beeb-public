@@ -7,6 +7,7 @@ import SwiftUI
     @Published var loading = false
     @Published var error: String?
     @Published var storageWarning: String?
+    var programmeOpened: ((CatalogueShow, String) -> Void)?
     private let discovery: DiscoveryAPI
     private let catalogue: CatalogueAPI
     private let cache: DiscoveryCache
@@ -44,6 +45,10 @@ import SwiftUI
     #if DEBUG
     /// Offline fixtures exercise layout/focus without depending on BBC availability.
     private func loadUIFixture() {
+        if ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] == "review" {
+            let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("review-homepage.html")
+            if let data = try? Data(contentsOf: path), let feed = try? DiscoveryAPI.home(data) { home = feed; return }
+        }
         let titles = ["The Reluctant Vampire", "Blue Lights", "The Americas", "Asia", "A much longer programme title on two lines", "Wild Isles", "Doctor Who", "The Capture"]
         let shows = titles.enumerated().map { index, title in
             CatalogueShow(id: "preview-\(index)", title: title, summary: "Discover the latest programmes on Beeb.", image: URL(string: "http://127.0.0.1:18745/\(index % 2 == 0 ? "wide.png" : "portrait.png")"), letter: "a", channel: "BBC", categories: [], expectedEpisodes: index % 2 == 0 ? 8 : 0, singleEpisode: false, episodes: [], indexedAt: nil, uhdListed: index % 2 == 0)
@@ -57,14 +62,18 @@ import SwiftUI
         #if DEBUG
         if ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] == "programme" { return show }
         #endif
-        if let loaded = details[show.id] { return loaded }
+        if let loaded = details[show.id] { programmeOpened?(loaded, show.id); return loaded }
         let old = await cache.read(CatalogueShow.self, key: "show-" + show.id)
         do {
-            let metadata = try await discovery.show(show.id)
+            let metadata: CatalogueShow
+            if let episodeID = show.discoveryEpisodeID {
+                metadata = try await discovery.parent(of: Programme(id: episodeID, title: show.title, summary: "", image: nil, version: "", guidance: nil))
+            } else { metadata = try await discovery.show(show.id) }
             let updated = try await catalogue.details(metadata)
             details[show.id] = updated; recent.removeAll { $0 == show.id }; recent.append(show.id)
             while recent.count > 12 { details.removeValue(forKey: recent.removeFirst()) }
             try? await cache.write(updated, key: "show-" + show.id)
+            programmeOpened?(updated, show.id)
             return updated
         } catch { if !Task.isCancelled, let old { return old }; throw error }
     }

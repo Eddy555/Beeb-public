@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import SwiftUI
+import TVServices
 
-private enum BeebTab: String, CaseIterable { case home = "Home", browse = "Browse", live = "Live", saved = "Saved", settings = "Settings" }
+private enum BeebTab: String, CaseIterable { case home = "Home", browse = "Browse", search = "Search", live = "Live", saved = "Saved", settings = "Settings" }
 struct HomeView: View {
     @StateObject private var catalogue = CatalogueStore()
+    @StateObject private var index = CatalogueIndexStore()
     @StateObject private var library = Library()
     @StateObject private var history = WatchHistory()
     @State private var tab = BeebTab.home
+    @State private var liveLaunch: LiveLaunch?
     @FocusState private var focusedTab: BeebTab?
     @Environment(\.scenePhase) private var phase
     var body: some View {
@@ -20,14 +23,37 @@ struct HomeView: View {
             NavigationStack {
                 switch tab {
                 case .home: DiscoveryHome(catalogue: catalogue, library: library)
-                case .browse: BrowseView(catalogue: catalogue, library: library)
-                case .live: LiveView()
+                case .browse: BrowseView(catalogue: catalogue, library: library, index: index)
+                case .search: CatalogueSearchView(index: index, catalogue: catalogue, library: library)
+                case .live: LiveView(launch: liveLaunch)
                 case .saved: SavedProgrammes(catalogue: catalogue, library: library)
                 case .settings: SettingsView(catalogue: catalogue)
                 }
             }.id(tab)
         }.environmentObject(history).tint(.pink).defaultFocus($focusedTab, .home)
-        .task { await catalogue.boot() }
+        .onOpenURL { url in
+            guard let id = LiveChannelLink.channelID(from: url) else { return }
+            if tab != .live { NotificationCenter.default.post(name: .beebLaunchLive, object: nil) }
+            liveLaunch = LiveLaunch(channelID: id)
+            tab = .live
+        }
+        .task {
+            TVTopShelfContentProvider.topShelfContentDidChange()
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["BEEB_LIVE_ROUTE_VALIDATE"] == "1" { return }
+            #endif
+            catalogue.programmeOpened = { show, sourceID in Task { await index.record(show, replacingID: sourceID) } }
+            await index.prepare(); await catalogue.boot()
+        }
+        .task(id: "\(phase)-\(index.refreshRevision)") {
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["BEEB_LIVE_ROUTE_VALIDATE"] == "1" || ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] == "review" { return }
+            #endif
+            if phase == .active { await index.maintain() }
+        }
+        #if DEBUG
+        .onAppear { if let value = ProcessInfo.processInfo.environment["BEEB_UI_TAB"], let selected = BeebTab.allCases.first(where: { $0.rawValue.lowercased() == value }) { tab = selected } }
+        #endif
         .onChange(of: phase) { _, value in if value == .active { Task { await catalogue.refreshHome() } } }
     }
 }
@@ -83,16 +109,26 @@ struct DiscoveryHome: View {
                                     Text("NEW & TRENDING").font(.caption).tracking(4).foregroundStyle(.pink)
                                     Text(feature.headline).font(.system(size: 48, weight: .bold)).lineLimit(2)
                                     Text(feature.synopsis).font(.title3).lineLimit(2).frame(maxWidth: 1000, alignment: .leading)
-                                    Label("Explore programme", systemImage: "play.fill").font(.headline)
                                 }.padding(38)
-                            }.frame(height: 530).cornerRadius(18)
+                            }.aspectRatio(2.35, contentMode: .fit).cornerRadius(18)
                         }.buttonStyle(ProgrammeCardStyle()).focused($bannerFocused)
-                        HStack(spacing: 26) {
-                            Button { state.banner = (index + feed.features.count - 1) % feed.features.count } label: { Image(systemName: "chevron.left") }
-                            Text("\(index + 1) / \(feed.features.count)").foregroundStyle(.secondary)
-                            Button { state.banner = (index + 1) % feed.features.count } label: { Image(systemName: "chevron.right") }
-                            Spacer()
+                        .onMoveCommand { direction in
+                            guard bannerFocused else { return }
+                            switch direction {
+                            case .left: advanceBanner(by: -1)
+                            case .right: advanceBanner(by: 1)
+                            default: break
+                            }
                         }
+                        .accessibilityAdjustableAction { direction in
+                            switch direction {
+                            case .increment: advanceBanner(by: 1)
+                            case .decrement: advanceBanner(by: -1)
+                            @unknown default: break
+                            }
+                        }
+                        // Match the 30-point bottom focus space beneath programme rows.
+                        .padding(.bottom, 30)
                     }
                     ContinueWatchingRow(catalogue: catalogue, library: library)
                     ForEach(feed.rows) { row in
@@ -101,7 +137,7 @@ struct DiscoveryHome: View {
                             ScrollView(.horizontal) {
                                 LazyHStack(spacing: 28) {
                                     ForEach(row.shows) { show in
-                                        NavigationLink { CatalogueShowView(show: show, catalogue: catalogue, library: library) } label: { ShowCard(show: show).frame(width: 330) }.buttonStyle(ProgrammeCardStyle()).focused($focusedCard, equals: "\(row.id):\(show.id)")
+                                        NavigationLink { CatalogueShowView(show: show, catalogue: catalogue, library: library) } label: { HomeProgrammeCard(show: show, poster: row.usesPosters).frame(width: row.usesPosters ? 260 : 360) }.buttonStyle(ProgrammeCardStyle()).accessibilityLabel(show.title).focused($focusedCard, equals: "\(row.id):\(show.id)")
                                     }
                                 }.padding(.vertical, 30).padding(.horizontal, 24)
                             }.scrollClipDisabled().padding(.horizontal, -24)
@@ -129,6 +165,13 @@ struct DiscoveryHome: View {
             withAnimation(.easeInOut(duration: 0.4)) { state.banner = (state.banner + 1) % rotationKey.count }
         }
     }
+    private func advanceBanner(by offset: Int) {
+        let count = catalogue.home?.features.count ?? 0
+        guard count > 1 else { return }
+        withAnimation(.easeInOut(duration: 0.25)) {
+            state.banner = (min(state.banner, count - 1) + offset + count) % count
+        }
+    }
     private func recordBannerValidation() {
         #if DEBUG
         guard ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] != nil else { return }
@@ -143,6 +186,7 @@ struct DiscoveryHome: View {
 struct BrowseView: View {
     @ObservedObject var catalogue: CatalogueStore
     @ObservedObject var library: Library
+    @ObservedObject var index: CatalogueIndexStore
     @StateObject private var state = BrowseState()
     var body: some View {
         ScrollView {
@@ -151,6 +195,9 @@ struct BrowseView: View {
                 Picker("Browse by", selection: $state.mode) { Text("Categories").tag("Categories"); Text("A–Z").tag("A–Z") }.pickerStyle(.segmented)
                 if state.mode == "Categories" {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 330))], spacing: 28) {
+                        NavigationLink { UHDCategoryView(index: index, catalogue: catalogue, library: library) } label: {
+                            Text("4K UHD").font(.title3).frame(maxWidth: .infinity, minHeight: 90).padding(12)
+                        }
                         ForEach(catalogue.genres) { genre in
                             NavigationLink { ProgrammePage(title: genre.title, category: genre.id, letter: nil, catalogue: catalogue, library: library) } label: {
                                 Text(genre.title).font(.title3).frame(maxWidth: .infinity, minHeight: 90).padding(12)
@@ -238,6 +285,19 @@ private struct ProgrammeCardSurface<Content: View>: View {
             .focusEffectDisabled().zIndex(focused ? 1 : 0)
     }
 }
+private struct HomeProgrammeCard: View {
+    let show: CatalogueShow
+    let poster: Bool
+    var body: some View {
+        if poster {
+            AsyncImage(url: show.portraitImage) { phase in
+                if let image = phase.image { image.resizable().scaledToFill() }
+                else { ZStack { Color(white: 0.12); Text(show.title).font(.title3).multilineTextAlignment(.center).padding(24) } }
+            }.frame(width: 260, height: 390).clipped().cornerRadius(12)
+                .accessibilityLabel(show.title)
+        } else { ShowCard(show: show) }
+    }
+}
 struct ShowCard: View {
     let show: CatalogueShow
     var body: some View {
@@ -245,9 +305,7 @@ struct ShowCard: View {
             ProgrammeThumbnail(url: show.image, uhd: show.uhdListed == true, hdr: show.hdrListed == true)
             Text(show.title).font(.headline).lineLimit(2)
                 .frame(maxWidth: .infinity, minHeight: 60, maxHeight: 60, alignment: .topLeading)
-            Text(show.expectedEpisodes > 0 ? "\(show.expectedEpisodes) episodes" : "Explore programme")
-                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                .frame(maxWidth: .infinity, minHeight: 28, maxHeight: 28, alignment: .leading)
+
         }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -263,6 +321,7 @@ struct CatalogueShowView: View {
     let show: CatalogueShow
     @ObservedObject var catalogue: CatalogueStore
     @ObservedObject var library: Library
+    var preferUHDSeries = false
     @StateObject private var state = ShowState()
     @FocusState private var focusedEpisode: String?
     var current: CatalogueShow { state.show ?? show }
@@ -282,7 +341,7 @@ struct CatalogueShowView: View {
                 Text(current.summary).font(.title3).foregroundStyle(.secondary)
                 if state.show == nil && state.error == nil { ProgressView("Getting series and episodes…") }
                 if let error = state.error { Text(error).foregroundStyle(.orange); Button("Retry") { state.retry += 1 } }
-                if current.series.count > 1 {
+                if orderedSeries.count > 1 {
                     ScrollView(.horizontal) {
                         HStack(spacing: 20) {
                             ForEach(orderedSeries) { series in
@@ -308,7 +367,12 @@ struct CatalogueShowView: View {
             }.padding(60)
         }.task(id: state.retry) {
             state.error = nil
-            do { state.show = try await catalogue.open(show) } catch { if !Task.isCancelled { state.error = error.localizedDescription } }
+            do {
+                state.show = try await catalogue.open(show)
+                if preferUHDSeries && state.seriesID.isEmpty {
+                    state.seriesID = orderedSeries.first(where: { $0.episodes.contains { $0.programme.uhdListed == true } })?.id ?? ""
+                }
+            } catch { if !Task.isCancelled { state.error = error.localizedDescription } }
         }.defaultFocus($focusedEpisode, visibleEpisodes.first?.id)
         .task(id: visibleEpisodes.first?.id) {
             guard let first = visibleEpisodes.first?.id else { return }
@@ -342,6 +406,7 @@ struct SavedProgrammes: View {
     @Published var playing = false
 }
 struct LiveView: View {
+    var launch: LiveLaunch? = nil
     @Environment(\.scenePhase) private var phase
     @StateObject private var state = LiveState()
     @StateObject private var playback = PlaybackModel()
@@ -369,6 +434,9 @@ struct LiveView: View {
             }.padding(60)
         }.task(id: "\(state.retry)-\(phase)-\(state.playing)") {
             guard phase == .active, !state.playing else { return }
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["BEEB_LIVE_ROUTE_VALIDATE"] == "1" || ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] == "review" { return }
+            #endif
             state.error = nil
             do {
                 let api = DiscoveryAPI()
@@ -379,23 +447,80 @@ struct LiveView: View {
                     try await Task.sleep(nanoseconds: 60_000_000_000)
                 }
             } catch { if !Task.isCancelled { state.error = error.localizedDescription } }
+        }.task(id: launch?.id) {
+            guard let launch else { return }
+            // Allow an existing episode cover to dismiss before the Live page presents.
+            do {
+                try await Task.sleep(nanoseconds: 400_000_000)
+                var channel = state.channels.first { $0.id == launch.channelID }
+                if channel == nil, let known = LiveShelfChannel.defaults.first(where: { $0.id == launch.channelID }) {
+                    channel = LiveChannel(id: known.id, title: known.title)
+                }
+                if channel == nil { channel = try await DiscoveryAPI().channels().first { $0.id == launch.channelID } }
+                try Task.checkCancellation()
+                guard let channel else { state.error = "This channel is not currently available."; return }
+                playback.startLive(channel) { state.playing = true }
+            } catch { if !Task.isCancelled { state.error = error.localizedDescription } }
         }.fullScreenCover(isPresented: $state.playing, onDismiss: { playback.stop() }) { PlaybackScreen(model: playback) }
         .onDisappear { if !state.playing { playback.stop() } }
     }
 }
 struct SettingsView: View {
     @ObservedObject var catalogue: CatalogueStore
+    @AppStorage("bbcOneRegion") private var bbcOne = "bbc_one_london"
+    @AppStorage("bbcTwoRegion") private var bbcTwo = "bbc_two_england"
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
                 Text("Settings").font(.largeTitle).bold()
                 Text("Playback automatically selects the best available quality, including 4K HDR when available. Live channel quality adapts to the stream BBC supplies.").foregroundStyle(.secondary)
+                NavigationLink {
+                    RegionSelectionView(title: "BBC One region", choices: RegionalChannels.bbcOne, selection: $bbcOne)
+                } label: { RegionSettingLabel(title: "BBC One region", value: RegionalChannels.bbcOne.first { $0.id == bbcOne }?.title ?? "London") }
+                NavigationLink {
+                    RegionSelectionView(title: "BBC Two version", choices: RegionalChannels.bbcTwo, selection: $bbcTwo)
+                } label: { RegionSettingLabel(title: "BBC Two version", value: RegionalChannels.bbcTwo.first { $0.id == bbcTwo }?.title ?? "England / Scotland") }
                 Button("Refresh homepage") { Task { await catalogue.refreshHome() } }.disabled(catalogue.loading)
                 Text("Programme listings load only when you select a category or letter. Series and episodes load when you open a programme. Saved programmes include all their series.")
                 if let warning = catalogue.storageWarning { Text(warning).foregroundStyle(.orange) }
                 UHDSetupView()
-                Text("Beeb 0.8.2 • Independent BBC player").font(.caption).foregroundStyle(.secondary)
+                Text("Beeb \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "") • Independent BBC player").font(.caption).foregroundStyle(.secondary)
             }.padding(60)
         }
+    }
+}
+
+private struct RegionSettingLabel: View {
+    let title: String
+    let value: String
+    var body: some View {
+        HStack { Text(title); Spacer(); Text(value).foregroundStyle(.secondary); Image(systemName: "chevron.right") }
+            .frame(maxWidth: .infinity).padding(.vertical, 8)
+    }
+}
+private struct RegionSelectionView: View {
+    let title: String
+    let choices: [RegionalChannelChoice]
+    @Binding var selection: String
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            Text(title).font(.largeTitle).bold()
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
+                    ForEach(choices) { choice in
+                        Button {
+                            selection = choice.id
+                            dismiss()
+                        } label: {
+                            HStack {
+                                Text(choice.title); Spacer()
+                                Image(systemName: selection == choice.id ? "checkmark.circle.fill" : "circle").opacity(selection == choice.id ? 1 : 0.3)
+                            }.frame(maxWidth: .infinity).padding(.horizontal, 16).padding(.vertical, 14)
+                        }.buttonStyle(OutlinedActionButtonStyle())
+                    }
+                }.padding(12)
+            }
+        }.padding(60)
     }
 }

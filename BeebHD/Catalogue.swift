@@ -30,6 +30,9 @@ struct CatalogueShow: Codable, Identifiable, Hashable {
     var indexedAt: Date?
     var uhdListed: Bool? = nil
     var hdrListed: Bool? = nil
+    var uhdEpisodeCount: Int? = nil
+    var discoveryEpisodeID: String? = nil
+    var portraitImage: URL? = nil
     var series: [CatalogueSeries] {
         var order = [String](), groups = [String: [CatalogueEpisode]]()
         for e in episodes {
@@ -66,6 +69,11 @@ struct CatalogueAPI {
             return image(value)
         }.first
     }
+    static func portraitImage(_ raw: Any?) -> URL? {
+        let images = raw as? [String: Any] ?? [:]
+        guard let value = images["portrait"] as? String, !value.isEmpty else { return nil }
+        return URL(string: value.replacingOccurrences(of: "{recipe}", with: "640x960"))
+    }
     static func episodeImage(_ raw: Any?) -> URL? {
         let images = raw as? [String: Any] ?? [:]
         // Standard is the episode still; promotional artwork is often shared by the whole show.
@@ -79,7 +87,9 @@ struct CatalogueAPI {
             throw BBCError.message("BBC's episode catalogue format has changed.")
         }
         let versions = value["versions"] as? [[String: Any]] ?? []
-        let version = versions.first(where: { $0["kind"] as? String == "original" }) ?? versions.first ?? [:]
+        let eligible = versions.filter { eligibleVersion($0) }
+        let version = eligible.first(where: { $0["uhd"] as? Bool == true })
+            ?? eligible.first(where: { $0["kind"] as? String == "original" }) ?? eligible.first ?? versions.first ?? [:]
         let subtitle = value["subtitle"] as? String ?? ""
         let slice = value["slice_id"] as? String ?? "episodes"
         let seriesTitle: String
@@ -88,18 +98,35 @@ struct CatalogueAPI {
         } else { seriesTitle = "Episodes" }
         let guidance = ((version["guidance"] as? [String: Any])?["text"] as? [String: Any])?["large"] as? String
         var p = Programme(id: id, title: subtitle.isEmpty ? title : "\(title) — \(subtitle)",
-                          summary: (value["synopses"] as? [String: Any])?["small"] as? String ?? "",
+                          summary: ["large", "medium", "small"].compactMap { (value["synopses"] as? [String: Any])?[$0] as? String }.first { !$0.isEmpty } ?? "",
                           image: episodeImage(value["images"]),
                           version: version["id"] as? String ?? "", guidance: guidance)
-        p.uhdListed = version["uhd"] as? Bool
+        p.uhdListed = !["available", ""].contains(value["status"] as? String ?? "") ? false : eligible.contains { $0["uhd"] as? Bool == true }
         p.hdrListed = version["hdr"] as? Bool
         p.durationText = (version["duration"] as? [String: Any])?["text"] as? String
+        p.firstBroadcast = version["first_broadcast"] as? String
+        p.firstBroadcastDateTime = version["first_broadcast_date_time"] as? String
         p.showID = value["tleo_id"] as? String
         p.showTitle = title
         p.episodeSubtitle = subtitle.isEmpty ? nil : subtitle
         return CatalogueEpisode(programme: p, subtitle: subtitle.isEmpty ? title : subtitle,
                                 duration: (version["duration"] as? [String: Any])?["text"] as? String ?? "",
                                 sliceID: slice, seriesTitle: seriesTitle, parentPosition: value["parent_position"] as? Int, broadcastDate: value["release_date_time"] as? String)
+    }
+    /// UHD can belong to a replacement edit, and the catalogue HDR flag is not an HLG test.
+    static func eligibleVersion(_ version: [String: Any], now: Date = Date()) -> Bool {
+        guard !["audio-described", "signed"].contains(version["kind"] as? String ?? "") else { return false }
+        let availability = version["availability"] as? [String: Any] ?? [:]
+        func date(_ key: String) -> Date? {
+            guard let raw = availability[key] as? String else { return nil }
+            let parser = ISO8601DateFormatter()
+            if let date = parser.date(from: raw) { return date }
+            parser.formatOptions.insert(.withFractionalSeconds)
+            return parser.date(from: raw)
+        }
+        if let start = date("start"), start > now { return false }
+        if let end = date("end"), end <= now { return false }
+        return true
     }
     static func container(_ data: Data, key: String) throws -> [String: Any] {
         guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -122,6 +149,7 @@ struct CatalogueAPI {
             channel: ((value["master_brand"] as? [String: Any])?["titles"] as? [String: Any])?["small"] as? String ?? "BBC",
             categories: value["categories"] as? [String] ?? [], expectedEpisodes: count, singleEpisode: single,
             episodes: children, indexedAt: single && children.count >= count ? Date() : nil)
+        show.portraitImage = portraitImage(value["images"])
         show.uhdListed = children.contains { $0.programme.uhdListed == true } ? true : nil
         show.hdrListed = children.contains { $0.programme.uhdListed == true && $0.programme.hdrListed == true }
         return show
@@ -158,6 +186,7 @@ struct CatalogueAPI {
         result.episodes = all; result.indexedAt = Date()
         result.uhdListed = all.contains { $0.programme.uhdListed == true }
         result.hdrListed = all.contains { $0.programme.uhdListed == true && $0.programme.hdrListed == true }
+        result.uhdEpisodeCount = all.filter { $0.programme.uhdListed == true }.count
         return result
     }
 }

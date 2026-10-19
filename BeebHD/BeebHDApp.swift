@@ -5,7 +5,11 @@ import SwiftUI
     var body: some Scene {
         WindowGroup {
             #if DEBUG
-            if ProcessInfo.processInfo.environment["BEEB_IDENTITY_VALIDATE"] == "1" { IdentityValidationView().preferredColorScheme(.dark) }
+            if ProcessInfo.processInfo.environment["BEEB_REVIEW_PLAYER"] == "1" { ReviewPlaybackView().preferredColorScheme(.dark) }
+            else if ProcessInfo.processInfo.environment["BEEB_CONTINUE_INFO_TEST"] == "1" { ResumeInfoValidationView().preferredColorScheme(.dark) }
+            else if ProcessInfo.processInfo.environment["BEEB_PLAYER_LAYOUT"] == "1" { PlayerLayoutValidationView().preferredColorScheme(.dark) }
+            else if ProcessInfo.processInfo.environment["BEEB_UHD_LAYOUT"] == "1" { UHDLayoutValidationView().preferredColorScheme(.dark) }
+            else if ProcessInfo.processInfo.environment["BEEB_IDENTITY_VALIDATE"] == "1" { IdentityValidationView().preferredColorScheme(.dark) }
             else if ProcessInfo.processInfo.environment["BEEB_EXTRAS_VALIDATE"] == "1" { ExtrasValidationView().preferredColorScheme(.dark) }
             else if ProcessInfo.processInfo.environment["BEEB_PROGRESS_VALIDATE"] == "1" { ProgressValidationView().preferredColorScheme(.dark) }
             else if ["detail", "history", "programme"].contains(ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] ?? "") { HistoryLayoutValidationView().preferredColorScheme(.dark) }
@@ -90,9 +94,9 @@ struct DetailView: View {
 struct UHDListedBadge: View {
     var hdr = false
     var body: some View {
-        Text(hdr ? "4K HDR" : "4K").font(.system(size: 19, weight: .bold)).padding(.horizontal, 10).padding(.vertical, 5)
+        Text("4K").font(.system(size: 19, weight: .bold)).padding(.horizontal, 10).padding(.vertical, 5)
             .background(.black.opacity(0.85)).foregroundStyle(.white).cornerRadius(6)
-            .accessibilityLabel(hdr ? "BBC lists a 4K HDR version" : "BBC lists a 4K version")
+            .accessibilityLabel("BBC lists a 4K version")
     }
 }
 

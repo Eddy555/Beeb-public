@@ -15,8 +15,8 @@ enum PlaybackPolicy {
     }
     static func badge(height: Int, videoRange: String?) -> String? {
         guard height > 0 else { return nil }
-        if height >= 2160 { return ["HLG", "PQ"].contains(videoRange?.uppercased() ?? "") ? "4K HDR" : "4K" }
-        if height >= 1080 { return "Full HD" }
+        if height >= 2160 { return "4K" }
+        if height >= 1080 { return "FHD" }
         if height >= 720 { return "HD" }
         return "SD"
     }

@@ -15,6 +15,8 @@ struct Programme: Identifiable, Codable, Hashable {
     var uhdListed: Bool? = nil
     var hdrListed: Bool? = nil
     var durationText: String? = nil
+    var firstBroadcast: String? = nil
+    var firstBroadcastDateTime: String? = nil
 }
 struct PlaybackSource {
     let url: URL

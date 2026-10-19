@@ -186,3 +186,56 @@ enum HLSSubtitles {
         return files
     }
 }
+
+#if canImport(AVFoundation)
+import AVFoundation
+
+/// Metadata used directly by AVKit’s native Info panel.
+enum PlaybackInfoMetadata {
+    static func synopsis(_ programme: Programme?) -> String {
+        guard let programme else { return "" }
+        return [programme.summary, programme.guidance ?? ""].filter { !$0.isEmpty }.joined(separator: "\n\n")
+    }
+    static func items(title: String, subtitle: String, programme: Programme? = nil, artwork: Data? = nil) -> [AVMetadataItem] {
+        func item(_ identifier: AVMetadataIdentifier, _ text: String) -> AVMetadataItem {
+            let value = AVMutableMetadataItem(); value.identifier = identifier; value.value = text as NSString; value.extendedLanguageTag = "en-GB"; return value
+        }
+        var result = [item(.commonIdentifierTitle, title)]
+        if !subtitle.isEmpty { result.append(item(.iTunesMetadataTrackSubTitle, subtitle)) }
+        if let programme {
+            let description = synopsis(programme)
+            if !description.isEmpty { result.append(item(.commonIdentifierDescription, description)) }
+            if let date = programme.firstBroadcastDateTime, !date.isEmpty { result.append(item(.iTunesMetadataReleaseDate, date)) }
+        }
+        if let artwork {
+            let value = AVMutableMetadataItem(); value.identifier = .commonIdentifierArtwork
+            value.value = artwork as NSData; value.dataType = "public.jpeg"
+            result.append(value)
+        }
+        return result
+    }
+}
+#endif
+
+#if canImport(ImageIO)
+import ImageIO
+
+/// Decode and resize once before AVKit sees the artwork. Called off the main actor.
+enum PlaybackInfoArtwork {
+    static func jpeg(from data: Data) -> Data? {
+        guard !data.isEmpty, data.count <= 8_000_000,
+              let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceThumbnailMaxPixelSize: 960,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: true
+              ] as CFDictionary) else { return nil }
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(output, "public.jpeg" as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else { return nil }
+        return output as Data
+    }
+}
+#endif
