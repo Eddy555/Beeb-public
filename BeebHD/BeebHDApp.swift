@@ -77,6 +77,7 @@ struct DetailView: View {
                 Button("Close") { dismiss() }
             }.buttonStyle(OutlinedActionButtonStyle())
         }.padding(70)
+        .onExitCommand { dismiss() }
         .task {
             #if DEBUG
             if ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] == "detail" { return }

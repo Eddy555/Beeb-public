@@ -12,11 +12,34 @@ This is an unofficial project, not produced or endorsed by the BBC. Choose **sou
 
 [Install from source](#install-on-apple-tv) · [Install the unsigned IPA](INSTALL-IPA.md) · [Set up UHD with TwinVine](#optional-4k-hlg-setup-with-twinvine) · [Troubleshooting](TROUBLESHOOTING.md)
 
-![Beeb homepage with programme discovery and Continue Watching](docs/screenshots/home.png)
+![Beeb Modern Sidebar homepage](docs/screenshots/modern-sidebar.png)
 
-*Screenshots are from the [original Reddit announcement](https://www.reddit.com/r/iplayer/comments/1x7kzsi/i_built_beeb_an_unofficial_apple_tv_bbc_player/). They show an earlier build; the current public version uses homepage banners without logos and episode-specific thumbnails where available.*
+*The homescreen and Settings captures show the native 0.10.8 interface using cached BBC listings and artwork. The older playback screenshots below are from the [original Reddit announcement](https://www.reddit.com/r/iplayer/comments/1x7kzsi/i_built_beeb_an_unofficial_apple_tv_bbc_player/); current playback quality badges read 4K, FHD, HD or SD.*
 
-**Current prepared release: 0.10.7 (build 28).** See [changes since 0.8.2](CHANGELOG.md).
+**Current prepared release: 0.10.8 (build 36).** See [the changelog](CHANGELOG.md).
+
+## New since 0.10.7
+
+- **Homescreen Layout:** choose Classic or Modern in Settings. Modern offers a floating Topbar or a Sidebar, and remembers your navigation choice when you switch layouts.
+- **Modern homescreens:** large programme artwork, pink focus accents and navigation that scrolls away with the banner as you browse the rows below.
+- **Cleaner Browse:** readable icon-led category cards and continuous browsing through categories and A–Z; 4K UHD cards also appear in one lazy grid. No Previous/Next controls for those listings.
+- **RED additional streams:** a RED action in every live player opens Red Button or Red Button UHD. Event feeds depend on BBC availability; an unavailable feed leaves your current channel playing.
+- **Live subtitles:** BBC's separate live timed-text feed is exposed through Apple's native subtitle controls. Captions use the stream's timing, including when seeking back. Confirmed working on Apple TV by the maintainer.
+- **Better Back navigation:** return to the previous programme/menu screen, close the sidebar, or dismiss Additional Streams without choosing another channel. The dialog also offers Cancel.
+- **More reliable episode loading:** updated BBC episode discovery and version selection for both HD and UHD playback.
+
+![Homescreen Layout options in Settings](docs/screenshots/homescreen-settings.png)
+
+<details>
+<summary>Classic, Modern Topbar and redesigned Browse</summary>
+
+![Classic homescreen](docs/screenshots/classic-home.png)
+
+![Modern Topbar homescreen](docs/screenshots/modern-topbar.png)
+
+![Readable native categories](docs/screenshots/browse-categories.png)
+
+</details>
 
 ## What Beeb can do
 
@@ -27,16 +50,17 @@ This is an unofficial project, not produced or endorsed by the BBC. Choose **sou
 | **Programme Info** | The Info button shows the title, episode subtitle, programme thumbnail, full synopsis, running time, original BBC broadcast date and guidance where supplied. A bounded description layout avoids a tvOS native-summary crash. Back hides Info or player controls; a second press exits playback immediately. |
 | **Playback speed** | Native on-demand speed menu beside Info, with 0.5×, 0.75×, 1×, 1.25×, 1.5× and 2× options. Live channels keep normal speed. |
 | **Regional channels** | Settings offers 16 BBC One regions and three BBC Two feeds. The chosen feed plays from Live or a Top Shelf channel card. Top Shelf artwork uses the default channel schedule. |
-| **Native English subtitles** | BBC TTML captions become a proper HLS WebVTT track. Apple's player handles rendering, Off/English selection and subtitle appearance. |
+| **Native English subtitles** | BBC TTML captions become a proper HLS WebVTT track for on-demand and supported live feeds. Apple's player handles rendering, selection and subtitle appearance. Live captions depend on BBC supplying a compatible timed-text feed. |
 | **Subtitles after skipping back** | With Apple's **Show on Skip Back** setting enabled on supported tvOS versions, skipping back 10 seconds can temporarily show captions. This behaviour has been checked on Apple TV. |
 | **Skip intro and recap** | Native contextual buttons use BBC-supplied timings matched to the version actually playing. Buttons appear only during a supplied skip interval. |
 | **Received-quality badge** | Shows an outlined 4K, FHD, HD or SD badge beside the episode metadata in the playback controls. The 4K label requires a received picture of at least 2160p; it does not infer HDR from BBC catalogue flags. |
 | **4K UHD category** | A saved UHD listing is available immediately. Beeb refreshes BBC’s UHD webpage daily, keeps cached discoveries, and checks episode-level availability when you open a programme. No full-catalogue episode scan. |
 | **Search** | Search the full cached BBC programme catalogue by title and synopsis using the native Apple TV keyboard, iPhone keyboard or Siri Remote dictation where supported. |
 | **Continue Watching and Up next** | Saves progress locally across launches. Resume an episode, start over, remove a show from the row or open the next episode after completion. |
-| **Programme discovery** | Featured programmes, categories, A–Z browsing, series selectors and ordered episode lists. Episode pages load when needed rather than indexing the whole catalogue at launch. |
+| **Programme discovery** | Featured programmes, readable categories, continuous category/A–Z browsing, series selectors and ordered episode lists. Episodes load on demand rather than indexing the whole catalogue at launch. |
 | **Saved programmes** | Bookmark a show and open its current available episodes later. |
 | **Live channels on Top Shelf** | Move Beeb to the home screen’s top row, press Up to its landscape channel cards, then Select to start that channel directly. Play/Pause starts it too. Current programme artwork is cached, with a channel card fallback. |
+| **RED additional streams** | During live TV, select RED beside Info to open Red Button or Red Button UHD. An unavailable additional feed leaves the current channel playing. The curated UHD event feed uses a rolling DASH-to-HLS bridge on Apple TV, without video transcoding, and is only available when BBC supplies a compatible live HLG event. It is separate from catch-up TwinVine setup. |
 | **Live television** | BBC channel tiles show the scheduled programme's title and artwork. Live quality and subtitles depend on the supplied feed. |
 | **Artwork suited to each view** | Plain promotional images for homepage banners, individual episode stills for episode cards, programme artwork for show listings, and clickable portrait-only posters in Stream Every Episode. Larger homepage cards omit redundant action text. |
 
@@ -62,7 +86,7 @@ This is an unofficial project, not produced or endorsed by the BBC. Choose **sou
 ### Choose your download
 
 - **Public source ZIP:** build and sign through Xcode using the steps below.
-- **Beeb-0.10.7-public-unsigned.ipa:** a prebuilt arm64 tvOS app, intended as a separate GitHub Release asset with a SHA-256 file. **Requires your own signing before installation.** Follow [the IPA signing/install guide](INSTALL-IPA.md). It contains no provisioning profile, developer signature or UHD identity.
+- **Beeb-0.10.8-public-unsigned.ipa:** a prebuilt arm64 tvOS app, intended as a separate GitHub Release asset with a SHA-256 file. **Requires your own signing before installation.** Follow [the IPA signing/install guide](INSTALL-IPA.md). It contains no provisioning profile, developer signature or UHD identity.
 
 Download the **[unsigned IPA and matching source ZIP from GitHub Releases](https://github.com/usefulappmaker/Beeb-public/releases/latest)**. The source ZIP intentionally excludes compiled binaries; the IPA is a separate release download.
 
@@ -155,6 +179,8 @@ Choose a currently available UHD-listed episode and press Play. Show the player 
 For local-network/interface problems, explicit config paths, expired links and identity renewal, follow [SETUP-UHD.md](SETUP-UHD.md) and [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ## Catalogue updates and 4K browsing
+
+Use **Settings → Display 4K UHD category** to show or hide this category in the topbar/sidebar and Browse. It is enabled by default and does not change TwinVine setup or playback quality.
 
 Open **Browse → Categories → 4K UHD** to see programmes with UHD-listed episodes. Opening a programme from this category selects a season with UHD episodes when available, while showing every episode in the season. Individual 4K episodes have a badge. The received playback quality can still fall back to HD if UHD is unavailable or your setup is not accepted.
 

@@ -26,3 +26,6 @@ TwinVine/
 *pairing-url*
 *setup-url*
 *stream-url*
+
+**/._*
+__MACOSX/

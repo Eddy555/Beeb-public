@@ -2,36 +2,202 @@
 import SwiftUI
 import TVServices
 
-private enum BeebTab: String, CaseIterable { case home = "Home", browse = "Browse", search = "Search", live = "Live", saved = "Saved", settings = "Settings" }
+private enum BeebTab: String, CaseIterable { case home = "Home", search = "Search", browse = "Browse", live = "Live", uhd = "4K UHD", saved = "Saved", settings = "Settings"
+    var icon: String {
+        switch self {
+        case .home: "house.fill"
+        case .search: "magnifyingglass"
+        case .browse: "square.grid.2x2"
+        case .live: "dot.radiowaves.left.and.right"
+        case .uhd: "4k.tv"
+        case .saved: "bookmark"
+        case .settings: "gearshape"
+        }
+    } }
 struct HomeView: View {
     @StateObject private var catalogue = CatalogueStore()
     @StateObject private var index = CatalogueIndexStore()
     @StateObject private var library = Library()
     @StateObject private var history = WatchHistory()
+    @AppStorage("homescreenLayout") private var homescreenLayout = "Modern"
+    @AppStorage("modernNavigation") private var modernNavigation = "Sidebar"
+    @AppStorage("display4KUHDCategory") private var display4KUHDCategory = true
+    private var visibleTabs: [BeebTab] { BeebTab.allCases.filter { display4KUHDCategory || $0 != .uhd } }
+    private var modern: Bool { homescreenLayout == "Modern" }
+    private var usesSidebar: Bool { modern && modernNavigation == "Sidebar" }
     @State private var tab = BeebTab.home
+    @StateObject private var homeState = HomeState()
     @State private var liveLaunch: LiveLaunch?
     @FocusState private var focusedTab: BeebTab?
+    @FocusState private var menuIconFocused: Bool
+    @State private var sidebarOpen = false
+    @State private var iconFocusRequest = 0
     @Environment(\.scenePhase) private var phase
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 30) {
-                Image("BeebMark").resizable().scaledToFit().frame(width: 64, height: 64).accessibilityLabel("Beeb")
-                HStack(spacing: 14) { ForEach(BeebTab.allCases, id: \.self) { value in BeebTabButton(tab: value, selection: $tab, focus: $focusedTab) } }
-                Spacer(minLength: 0)
-                if catalogue.loading { ProgressView().accessibilityLabel("Updating homepage") }
-            }.padding(.horizontal, 64).padding(.vertical, 18)
-            NavigationStack {
-                switch tab {
-                case .home: DiscoveryHome(catalogue: catalogue, library: library)
-                case .browse: BrowseView(catalogue: catalogue, library: library, index: index)
-                case .search: CatalogueSearchView(index: index, catalogue: catalogue, library: library)
-                case .live: LiveView(launch: liveLaunch)
-                case .saved: SavedProgrammes(catalogue: catalogue, library: library)
-                case .settings: SettingsView(catalogue: catalogue)
+    private var navigationButton: some View {
+        Button {
+            if sidebarOpen { closeSidebar() } else { openSidebar() }
+        } label: {
+            HStack(spacing: 14) {
+                Image("BeebMark").resizable().scaledToFit().frame(width: 48, height: 48)
+                    .shadow(color: .pink.opacity(menuIconFocused ? 0.85 : 0), radius: 20)
+                    .shadow(color: .pink.opacity(menuIconFocused ? 0.45 : 0), radius: 8)
+                Text("Beeb").font(.system(size: 36, weight: .bold)).foregroundStyle(.white)
+            }.padding(.vertical, 16)
+                .scaleEffect(menuIconFocused ? 1.035 : 1)
+
+        }.buttonStyle(BeebTabStyle()).focused($menuIconFocused).focusEffectDisabled()
+            .accessibilityLabel("Navigation").accessibilityValue(sidebarOpen ? "Expanded" : "Collapsed")
+    }
+    private var sidebarHeader: some View {
+        HStack {
+            if sidebarOpen || tab == .home {
+                navigationButton.onMoveCommand { direction in
+                    if sidebarOpen {
+                        if direction == .down { focusedTab = tab }
+                        if direction == .right { closeSidebar() }
+                    } else if direction == .down || direction == .right {
+                        homeState.heroFocusRequest += 1
+                    }
                 }
-            }.id(tab)
-        }.environmentObject(history).tint(.pink).defaultFocus($focusedTab, .home)
+            } else { navigationButton }
+            Spacer(minLength: 0)
+        }.padding(.horizontal, 64).padding(.top, 48).padding(.bottom, 16)
+    }
+    @ViewBuilder private var navigationIcon: some View {
+        if usesSidebar { sidebarHeader.defaultFocus($menuIconFocused, true) }
+        else { horizontalHeader.defaultFocus($focusedTab, .home) }
+    }
+    private var horizontalHeader: some View {
+        HStack(spacing: modern ? 32 : 30) {
+            HStack(spacing: 12) {
+                Image("BeebMark").resizable().scaledToFit().frame(width: modern ? 48 : 64, height: modern ? 48 : 64)
+                if modern { Text("Beeb").font(.system(size: 34, weight: .bold)) }
+            }.accessibilityElement(children: .combine).accessibilityLabel("Beeb")
+            if modern { Spacer(minLength: 12) }
+            HStack(spacing: modern ? 4 : 14) {
+                ForEach(visibleTabs, id: \.self) { value in
+                    Button { tab = value } label: {
+                        HStack(spacing: 8) {
+                            if modern { Image(systemName: value.icon) }
+                            Text(value.rawValue)
+                        }.font(modern ? .system(size: 22, weight: .semibold) : .headline)
+                            .padding(.horizontal, modern ? 20 : 24).padding(.vertical, 16)
+                            .foregroundStyle(modern && focusedTab == value ? Color.black : .white.opacity(focusedTab == value || tab == value ? 1 : 0.7))
+                            .background {
+                                if modern {
+                                    Capsule().fill(focusedTab == value ? Color.white : tab == value ? .white.opacity(0.13) : .clear)
+                                        .shadow(color: .pink.opacity(focusedTab == value ? 0.55 : 0), radius: 20)
+                                } else {
+                                    RoundedRectangle(cornerRadius: 12).fill(.white.opacity(focusedTab == value ? 0.2 : tab == value ? 0.12 : 0))
+                                }
+                            }
+                    }.buttonStyle(BeebTabStyle()).focused($focusedTab, equals: value).focusEffectDisabled()
+                        .accessibilityAddTraits(tab == value ? .isSelected : [])
+                        .onMoveCommand { direction in
+                            guard tab == .home else { return }
+                            let values = visibleTabs, position = visibleTabs.firstIndex(of: value) ?? 0
+                            switch direction {
+                            case .down: homeState.heroFocusRequest += 1
+                            case .left: focusedTab = values[max(0, position - 1)]
+                            case .right: focusedTab = values[min(values.count - 1, position + 1)]
+                            default: break
+                            }
+                        }
+                }
+            }.padding(modern ? 8 : 0)
+                .background {
+                    if modern { Capsule().fill(.ultraThinMaterial).overlay { Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1) }.shadow(color: .black.opacity(0.3), radius: 20, y: 8) }
+                }
+            Spacer(minLength: 0)
+        }.padding(.horizontal, 64).padding(.top, modern ? (tab == .home ? 64 : 24) : 18).padding(.bottom, 18)
+    }
+    private func menuItem(_ value: BeebTab) -> some View {
+        BeebTabButton(tab: value, selected: tab, focus: $focusedTab) {
+            tab = value
+            closeSidebar()
+        }.onMoveCommand { direction in
+            let values = visibleTabs
+            let position = values.firstIndex(of: value) ?? 0
+            switch direction {
+            case .up:
+                if position == 0 { focusedTab = nil; menuIconFocused = true }
+                else { focusedTab = values[position - 1] }
+            case .down: focusedTab = values[min(values.count - 1, position + 1)]
+            case .right: closeSidebar()
+            default: break
+            }
+        }
+    }
+    private var sidebar: some View {
+        GeometryReader { geometry in
+            VStack(spacing: 12) {
+                ForEach(visibleTabs.filter { $0 != .settings }, id: \.self) { menuItem($0) }
+                Spacer(minLength: 24)
+                Divider().overlay(.white.opacity(0.12))
+                menuItem(.settings)
+            }.padding(18).frame(width: 296, height: max(600, geometry.size.height - 196))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28))
+                .overlay { RoundedRectangle(cornerRadius: 28).strokeBorder(.white.opacity(0.18), lineWidth: 1) }
+                .shadow(color: .black.opacity(0.35), radius: 20, y: 8)
+                .padding(.leading, 48).padding(.top, 148)
+                .onAppear { focusedTab = tab }
+                .onExitCommand { closeSidebar() }
+        }.ignoresSafeArea()
+    }
+    private func openSidebar() {
+        homeState.scrollTopRequest += 1
+        withAnimation(.easeOut(duration: 0.2)) { sidebarOpen = true }
+    }
+    private func closeSidebar() {
+        focusedTab = nil
+        withAnimation(.easeOut(duration: 0.2)) { sidebarOpen = false }
+        if tab == .home { homeState.heroFocusRequest += 1 }
+        else { iconFocusRequest += 1 }
+    }
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(red: 0.035, green: 0.015, blue: 0.055).ignoresSafeArea()
+                if tab == .home && modern {
+                    DiscoveryHome(catalogue: catalogue, library: library, state: homeState,
+                                  header: navigationIcon, menuOpen: sidebarOpen,
+                                  focusHeader: { homeState.scrollTopRequest += 1; if usesSidebar { menuIconFocused = true } else { focusedTab = .home } })
+                } else {
+                    VStack(spacing: 0) {
+                        navigationIcon
+                        Group {
+                            switch tab {
+                            case .home: ClassicDiscoveryHome(catalogue: catalogue, library: library, state: homeState)
+                            case .uhd: UHDCategoryView(index: index, catalogue: catalogue, library: library)
+                            case .browse: BrowseView(catalogue: catalogue, library: library, index: index)
+                            case .search: CatalogueSearchView(index: index, catalogue: catalogue, library: library)
+                            case .live: LiveView(launch: liveLaunch)
+                            case .saved: SavedProgrammes(catalogue: catalogue, library: library)
+                            case .settings: SettingsView(catalogue: catalogue)
+                            }
+                        }.id(tab).disabled(sidebarOpen)
+                    }
+                }
+            }.modifier(RootBackAction(active: tab != .home) {
+                sidebarOpen = false; tab = .home; homeState.heroFocusRequest += 1
+            }).overlay(alignment: .topLeading) {
+                if usesSidebar && sidebarOpen { sidebar.transition(.move(edge: .leading).combined(with: .opacity)) }
+            }
+        }.id(liveLaunch?.id).environmentObject(history).tint(.pink)
+        .task(id: iconFocusRequest) {
+            guard iconFocusRequest > 0 else { return }
+            do { try await Task.sleep(nanoseconds: 150_000_000) } catch { return }
+            if !sidebarOpen && tab != .home { menuIconFocused = true }
+        }
+        .onChange(of: homescreenLayout) { _, _ in sidebarOpen = false; focusedTab = nil; menuIconFocused = false }
+        .onChange(of: display4KUHDCategory) { _, visible in
+            guard !visible else { return }
+            if tab == .uhd { tab = .home; homeState.heroFocusRequest += 1 }
+            if focusedTab == .uhd { focusedTab = .home }
+        }
+        .onChange(of: modernNavigation) { _, _ in sidebarOpen = false; focusedTab = nil; menuIconFocused = false }
         .onOpenURL { url in
+            sidebarOpen = false
             guard let id = LiveChannelLink.channelID(from: url) else { return }
             if tab != .live { NotificationCenter.default.post(name: .beebLaunchLive, object: nil) }
             liveLaunch = LiveLaunch(channelID: id)
@@ -52,34 +218,208 @@ struct HomeView: View {
             if phase == .active { await index.maintain() }
         }
         #if DEBUG
-        .onAppear { if let value = ProcessInfo.processInfo.environment["BEEB_UI_TAB"], let selected = BeebTab.allCases.first(where: { $0.rawValue.lowercased() == value }) { tab = selected } }
+        .onAppear { if let value = ProcessInfo.processInfo.environment["BEEB_UI_TAB"], let selected = visibleTabs.first(where: { $0.rawValue.lowercased() == value }) { tab = selected } }
         #endif
         .onChange(of: phase) { _, value in if value == .active { Task { await catalogue.refreshHome() } } }
     }
 }
 private struct BeebTabButton: View {
     let tab: BeebTab
-    @Binding var selection: BeebTab
+    let selected: BeebTab
     let focus: FocusState<BeebTab?>.Binding
+    let action: () -> Void
     private var focused: Bool { focus.wrappedValue == tab }
     var body: some View {
-        Button { selection = tab } label: {
-            Text(tab.rawValue).font(.headline).padding(.horizontal, 24).padding(.vertical, 16)
-                .foregroundStyle(focused || selection == tab ? .white : .white.opacity(0.7))
-                .background(focused ? Color.white.opacity(0.2) : selection == tab ? Color.white.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 12))
+        Button(action: action) {
+            Label(tab.rawValue, systemImage: tab.icon).font(.system(size: 25, weight: .semibold))
+                .labelStyle(.titleAndIcon).frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20).frame(height: 68)
+                .foregroundStyle(focused ? Color.black : .white.opacity(selected == tab ? 1 : 0.75))
+                .background(focused ? Color.white : selected == tab ? .white.opacity(0.1) : .clear, in: RoundedRectangle(cornerRadius: 18))
+                .shadow(color: .pink.opacity(focused ? 0.55 : 0), radius: 16)
         }.buttonStyle(BeebTabStyle()).focused(focus, equals: tab).focusEffectDisabled()
-            .accessibilityAddTraits(selection == tab ? .isSelected : [])
+            .accessibilityAddTraits(selected == tab ? .isSelected : [])
     }
 }
 private struct BeebTabStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View { configuration.label.opacity(configuration.isPressed ? 0.7 : 1) }
 }
+private struct CinematicBackdrop: View {
+    let url: URL?
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                Color(red: 0.035, green: 0.015, blue: 0.055)
+                if let url {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFit()
+                            .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.22), .init(color: .black, location: 1)], startPoint: .leading, endPoint: .trailing))
+                    } placeholder: { Color.clear }
+                        .frame(width: geometry.size.width, height: geometry.size.height, alignment: .trailing)
+                    LinearGradient(stops: [.init(color: .black.opacity(0.88), location: 0), .init(color: .black.opacity(0.5), location: 0.38), .init(color: .clear, location: 0.78)], startPoint: .leading, endPoint: .trailing)
+                    LinearGradient(stops: [.init(color: .black.opacity(0.18), location: 0), .init(color: .clear, location: 0.3), .init(color: Color(red: 0.035, green: 0.015, blue: 0.055).opacity(0.9), location: 0.72), .init(color: Color(red: 0.035, green: 0.015, blue: 0.055), location: 1)], startPoint: .top, endPoint: .bottom)
+                }
+            }
+        }.allowsHitTesting(false).accessibilityHidden(true)
+    }
+}
+private struct CinematicActionStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        CinematicActionSurface(content: configuration.label, pressed: configuration.isPressed)
+    }
+}
+private struct CinematicActionSurface<Content: View>: View {
+    let content: Content
+    let pressed: Bool
+    @Environment(\.isFocused) private var focused
+    var body: some View {
+        content.font(.system(size: 26, weight: .semibold)).padding(.horizontal, 34).padding(.vertical, 22)
+            .foregroundStyle(focused ? Color.black : Color.white)
+            .background(focused ? Color.white : Color.white.opacity(0.12), in: Capsule())
+            .overlay { Capsule().strokeBorder(.white.opacity(focused ? 0.9 : 0.22), lineWidth: 1) }
+            .shadow(color: Color(red: 1, green: 0.04, blue: 0.43).opacity(focused ? 0.65 : 0), radius: 26, y: 4)
+            .scaleEffect(pressed ? 0.98 : focused ? 1.035 : 1)
+            .animation(.easeOut(duration: 0.18), value: focused).focusEffectDisabled()
+    }
+}
 private struct BannerRotationKey: Hashable { let index: Int; let count: Int; let paused: Bool }
-@MainActor final class HomeState: ObservableObject { @Published var banner = 0 }
-struct DiscoveryHome: View {
+@MainActor final class HomeState: ObservableObject { @Published var banner = 0; @Published var heroFocusRequest = 0; @Published var scrollTopRequest = 0 }
+struct DiscoveryHome<Header: View>: View {
     @ObservedObject var catalogue: CatalogueStore
     @ObservedObject var library: Library
-    @StateObject private var state = HomeState()
+    @ObservedObject var state: HomeState
+    let header: Header
+    let menuOpen: Bool
+    let focusHeader: () -> Void
+    @Environment(\.scenePhase) private var phase
+    @FocusState private var bannerFocused: Bool
+    @FocusState private var focusedCard: String?
+    @State private var visible = false
+    private var rotationKey: BannerRotationKey {
+        BannerRotationKey(index: state.banner, count: catalogue.home?.features.count ?? 0, paused: !visible || bannerFocused || menuOpen || phase != .active)
+    }
+    private var feature: HomeFeature? {
+        guard let features = catalogue.home?.features, !features.isEmpty else { return nil }
+        return features[min(state.banner, features.count - 1)]
+    }
+    var body: some View {
+        ScrollViewReader { scroll in
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(spacing: 0) {
+                    header
+                    if let feature {
+                        VStack(alignment: .leading, spacing: 22) {
+                            Spacer(minLength: 0)
+                            Text("FEATURED").font(.system(size: 22, weight: .semibold)).tracking(5).foregroundStyle(.pink)
+                            Text(feature.headline).font(.system(size: 64, weight: .bold)).lineLimit(2)
+                                .frame(maxWidth: 1000, alignment: .leading)
+                            Text(feature.synopsis).font(.system(size: 27)).lineLimit(2)
+                                .foregroundStyle(.white.opacity(0.85)).frame(maxWidth: 950, alignment: .leading)
+                            if feature.show.uhdListed == true { UHDListedBadge(hdr: false) }
+                            NavigationLink {
+                                CatalogueShowView(show: feature.show, catalogue: catalogue, library: library)
+                            } label: {
+                                Label("Watch now", systemImage: "play.fill")
+                            }.buttonStyle(CinematicActionStyle()).focused($bannerFocused).disabled(menuOpen).padding(.top, 8)
+                                .onMoveCommand { direction in
+                                    guard bannerFocused else { return }
+                                    if direction == .left { advanceBanner(by: -1) }
+                                    if direction == .right { advanceBanner(by: 1) }
+                                    if direction == .up { focusHeader() }
+                                }
+                                .accessibilityAdjustableAction { direction in
+                                    switch direction {
+                                    case .increment: advanceBanner(by: 1)
+                                    case .decrement: advanceBanner(by: -1)
+                                    @unknown default: break
+                                    }
+                                }
+                            Spacer(minLength: 0)
+                        }.frame(maxWidth: .infinity, minHeight: 440, maxHeight: 440, alignment: .leading)
+                             .padding(.leading, menuOpen ? 368 : 64).padding(.trailing, 64).padding(.top, 26).padding(.bottom, 50)
+                            .animation(.easeOut(duration: 0.2), value: menuOpen)
+                    }
+                }.background { CinematicBackdrop(url: feature?.image) }.clipped().id("home-header")
+                VStack(alignment: .leading, spacing: 34) {
+                    if let error = catalogue.error { Text(error).foregroundStyle(.orange).font(.callout) }
+                    if let feed = catalogue.home {
+                    ContinueWatchingRow(catalogue: catalogue, library: library)
+                    ForEach(feed.rows) { row in
+                        VStack(alignment: .leading, spacing: 18) {
+                            Text(row.title).font(.title2).bold()
+                            ScrollView(.horizontal) {
+                                LazyHStack(spacing: 28) {
+                                    ForEach(row.shows) { show in
+                                        NavigationLink { CatalogueShowView(show: show, catalogue: catalogue, library: library) } label: { HomeProgrammeCard(show: show, poster: row.usesPosters).frame(width: row.usesPosters ? 260 : 360) }.buttonStyle(ProgrammeCardStyle()).accessibilityLabel(show.title).focused($focusedCard, equals: "\(row.id):\(show.id)")
+                                    }
+                                }.padding(.vertical, 30).padding(.horizontal, 24)
+                            }.scrollClipDisabled().padding(.horizontal, -24)
+                        }
+                    }
+                } else if catalogue.loading { ProgressView("Getting the latest programmes…") }
+                else { Button("Retry homepage") { Task { await catalogue.refreshHome() } } }
+                }.disabled(menuOpen).padding(.leading, menuOpen ? 368 : 64).padding(.trailing, 64)
+                    .padding(.top, 34).padding(.bottom, 60)
+                    .animation(.easeOut(duration: 0.2), value: menuOpen)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(red: 0.035, green: 0.015, blue: 0.055))
+            }
+        }.ignoresSafeArea().scrollClipDisabled()
+        .task(id: state.scrollTopRequest) {
+            guard state.scrollTopRequest > 0 else { return }
+            scroll.scrollTo("home-header", anchor: .top)
+        }
+        .onChange(of: bannerFocused) { _, focused in
+            if focused { scroll.scrollTo("home-header", anchor: .top) }
+        }
+        .task(id: state.heroFocusRequest) {
+            guard state.heroFocusRequest > 0, feature != nil, !menuOpen else { return }
+            scroll.scrollTo("home-header", anchor: .top)
+            do { try await Task.sleep(nanoseconds: 150_000_000) } catch { return }
+            bannerFocused = true
+            scroll.scrollTo("home-header", anchor: .top)
+        }
+        .onAppear { visible = true }
+        .task(id: phase) {
+            #if DEBUG
+            guard phase == .active else { return }
+            do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { return }
+            if ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] == "cards" { focusedCard = "preview:preview-0" }
+            if ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] == "banner-focused" || ProcessInfo.processInfo.environment["BEEB_HOME_HERO_FOCUS"] == "1" { bannerFocused = true }
+            #endif
+        }
+        .onDisappear { visible = false }
+        .onChange(of: rotationKey) { _, _ in recordBannerValidation() }
+        .task(id: rotationKey) {
+            guard !rotationKey.paused, rotationKey.count > 1 else { return }
+            do { try await Task.sleep(nanoseconds: 8_000_000_000) } catch { return }
+            guard !Task.isCancelled, visible, !bannerFocused, !menuOpen, phase == .active else { return }
+            withAnimation(.easeInOut(duration: 0.4)) { state.banner = (state.banner + 1) % rotationKey.count }
+        }
+    }
+    }
+    private func advanceBanner(by offset: Int) {
+        let count = catalogue.home?.features.count ?? 0
+        guard count > 1 else { return }
+        withAnimation(.easeInOut(duration: 0.25)) {
+            state.banner = (min(state.banner, count - 1) + offset + count) % count
+        }
+    }
+    private func recordBannerValidation() {
+        #if DEBUG
+        guard ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] != nil else { return }
+        let values: [String: Any] = ["index": state.banner, "count": rotationKey.count, "focused": bannerFocused, "visible": visible, "active": phase == .active, "timestamp": Date().timeIntervalSince1970]
+        let output = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("UI-validation.json")
+        if let data = try? JSONSerialization.data(withJSONObject: values) { try? data.write(to: output, options: .atomic) }
+        #endif
+    }
+
+}
+private struct ClassicDiscoveryHome: View {
+    @ObservedObject var catalogue: CatalogueStore
+    @ObservedObject var library: Library
+    @ObservedObject var state: HomeState
     @Environment(\.scenePhase) private var phase
     @FocusState private var bannerFocused: Bool
     @FocusState private var focusedCard: String?
@@ -153,8 +493,11 @@ struct DiscoveryHome: View {
             guard phase == .active else { return }
             do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { return }
             if ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] == "cards" { focusedCard = "preview:preview-0" }
-            if ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] == "banner-focused" { bannerFocused = true }
+            if ProcessInfo.processInfo.environment["BEEB_UI_PREVIEW"] == "banner-focused" || ProcessInfo.processInfo.environment["BEEB_HOME_HERO_FOCUS"] == "1" { bannerFocused = true }
             #endif
+        }
+        .task(id: state.heroFocusRequest) {
+            guard state.heroFocusRequest > 0 else { return }; bannerFocused = true
         }
         .onDisappear { visible = false }
         .onChange(of: rotationKey) { _, _ in recordBannerValidation() }
@@ -184,27 +527,32 @@ struct DiscoveryHome: View {
 }
 @MainActor final class BrowseState: ObservableObject { @Published var mode = "Categories" }
 struct BrowseView: View {
+    @AppStorage("display4KUHDCategory") private var display4KUHDCategory = true
     @ObservedObject var catalogue: CatalogueStore
     @ObservedObject var library: Library
     @ObservedObject var index: CatalogueIndexStore
     @StateObject private var state = BrowseState()
+    @FocusState private var categoryFocus: String?
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
-                Text("Browse programmes").font(.largeTitle).bold()
-                Picker("Browse by", selection: $state.mode) { Text("Categories").tag("Categories"); Text("A–Z").tag("A–Z") }.pickerStyle(.segmented)
+                Text("Browse").font(.system(size: 48, weight: .bold))
+                Picker("Browse by", selection: $state.mode) {
+                    Text("Categories").tag("Categories"); Text("A–Z").tag("A–Z")
+                }.pickerStyle(.segmented).frame(width: 520)
                 if state.mode == "Categories" {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 330))], spacing: 28) {
-                        NavigationLink { UHDCategoryView(index: index, catalogue: catalogue, library: library) } label: {
-                            Text("4K UHD").font(.title3).frame(maxWidth: .infinity, minHeight: 90).padding(12)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 24), count: 3), spacing: 24) {
+                        if display4KUHDCategory {
+                            NavigationLink { UHDCategoryView(index: index, catalogue: catalogue, library: library) } label: {
+                                CategoryTile(title: "4K UHD", icon: "4k.tv")
+                            }.buttonStyle(ProgrammeCardStyle())
                         }
                         ForEach(catalogue.genres) { genre in
                             NavigationLink { ProgrammePage(title: genre.title, category: genre.id, letter: nil, catalogue: catalogue, library: library) } label: {
-                                Text(genre.title).font(.title3).frame(maxWidth: .infinity, minHeight: 90).padding(12)
-                            }
+                                CategoryTile(title: genre.title, icon: CategoryTile.icon(genre.id))
+                            }.buttonStyle(ProgrammeCardStyle()).focused($categoryFocus, equals: genre.id)
                         }
                     }
-                    if catalogue.genres.isEmpty { Button("Reload categories") { Task { await catalogue.refreshHome() } } }
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 150))], spacing: 24) {
                         ForEach(CatalogueAPI.letters, id: \.self) { letter in
@@ -214,9 +562,38 @@ struct BrowseView: View {
                         }
                     }
                 }
-                Text("Choose a category or letter. Programme listings load one page at a time; episodes load when you open a programme.")
-                    .font(.callout).foregroundStyle(.secondary)
-            }.padding(60)
+            }.padding(.horizontal, 60).padding(.top, 24).padding(.bottom, 60)
+        }
+    }
+}
+private struct CategoryTile: View {
+    let title: String
+    let icon: String
+    var body: some View {
+        HStack(spacing: 22) {
+            Image(systemName: icon).font(.system(size: 34, weight: .medium)).foregroundStyle(.pink).frame(width: 52)
+            Text(title).font(.system(size: 29, weight: .semibold)).lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "chevron.right").font(.system(size: 18, weight: .semibold)).foregroundStyle(.white.opacity(0.4))
+        }.padding(.horizontal, 26).frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+    }
+    static func icon(_ id: String) -> String {
+        switch id {
+        case "drama-and-soaps": "theatermasks"
+        case "films": "film"
+        case "comedy": "face.smiling"
+        case "documentaries": "doc.text.image"
+        case "sport": "sportscourt"
+        case "news": "newspaper"
+        case "entertainment": "sparkles.tv"
+        case "music": "music.note"
+        case "food": "fork.knife"
+        case "lifestyle": "house"
+        case "history": "clock.arrow.circlepath"
+        case "science-and-nature": "leaf"
+        case "arts": "paintpalette"
+        case "archive": "archivebox"
+        default: "play.rectangle"
         }
     }
 }
@@ -226,30 +603,33 @@ struct ProgrammePage: View {
     let letter: String?
     @ObservedObject var catalogue: CatalogueStore
     @ObservedObject var library: Library
-    @StateObject private var page = PageStore()
-    @StateObject private var state = PageState()
+    @StateObject private var page = ContinuousCatalogueStore()
+    @Environment(\.dismiss) private var dismiss
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                Text(title).font(.largeTitle).bold()
-                HStack(spacing: 24) {
-                    Button("Previous") { state.page -= 1 }.disabled(state.page <= 1 || page.loading)
-                    Text("Page \(state.page) of \(page.totalPages) · \(page.count) programmes").font(.callout)
-                    Button("Next") { state.page += 1 }.disabled(state.page >= page.totalPages || page.loading)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(title).font(.system(size: 48, weight: .bold))
                     Spacer()
+                    if page.count > 0 {Text("\(page.count) programmes").font(.callout).foregroundStyle(.secondary)}
                 }
-                if page.loading { ProgressView("Loading programmes…") }
-                if let error = page.error { Text(error).foregroundStyle(.orange); Button("Retry") { state.retry += 1 } }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 330), spacing: 28)], spacing: 30) {
-                    ForEach(page.shows) { show in
+                    ForEach(Array(page.shows.enumerated()), id: \.element.id) { position, show in
                         NavigationLink { CatalogueShowView(show: show, catalogue: catalogue, library: library) } label: { ShowCard(show: show) }.buttonStyle(ProgrammeCardStyle())
+                            .task {if position >= page.shows.count-6 {await page.next(category:category,letter:letter)}}
                     }
                 }
+                if page.loading {ProgressView()}
+                if let error = page.error {
+                    Text(error).font(.callout).foregroundStyle(.orange)
+                    Button("Retry") {Task {await page.next(category:category,letter:letter)}}
+                }
             }.padding(60)
-        }.task(id: "\(state.page)-\(state.retry)") { await page.load(category: category, letter: letter, page: state.page) }
+        }.background(Color(red: 0.035, green: 0.015, blue: 0.055).ignoresSafeArea())
+        .task {await page.next(category:category,letter:letter)}
+        .onExitCommand { dismiss() }
     }
 }
-@MainActor final class PageState: ObservableObject { @Published var page = 1; @Published var retry = 0 }
 /// Give the image a finite proposal before scaledToFill; intrinsic artwork sizes
 /// must never determine a row's card width or its focus outline.
 struct ProgrammeThumbnail: View {
@@ -331,6 +711,7 @@ struct CatalogueShowView: View {
         return EpisodeSequence.ordered(group?.episodes ?? [])
     }
     var visibleEpisodes: [CatalogueEpisode] { Array(selectedEpisodes.dropFirst((state.episodePage - 1) * 30).prefix(30)) }
+    @Environment(\.dismiss) private var dismiss
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -379,6 +760,7 @@ struct CatalogueShowView: View {
             do { try await Task.sleep(nanoseconds: 150_000_000) } catch { return }
             focusedEpisode = first
         }.sheet(item: $state.selection) { DetailView(programme: $0, show: current, library: library) }
+        .onExitCommand { dismiss() }
     }
 }
 struct SavedProgrammes: View {
@@ -466,13 +848,33 @@ struct LiveView: View {
     }
 }
 struct SettingsView: View {
+    @AppStorage("display4KUHDCategory") private var display4KUHDCategory = true
     @ObservedObject var catalogue: CatalogueStore
+    @AppStorage("homescreenLayout") private var homescreenLayout = "Modern"
+    @AppStorage("modernNavigation") private var modernNavigation = "Sidebar"
     @AppStorage("bbcOneRegion") private var bbcOne = "bbc_one_london"
     @AppStorage("bbcTwoRegion") private var bbcTwo = "bbc_two_england"
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
                 Text("Settings").font(.largeTitle).bold()
+                VStack(alignment: .leading, spacing: 24) {
+                    Text("Homescreen Layout").font(.title2).bold()
+                    Picker("Homescreen Layout", selection: $homescreenLayout) {
+                        Text("Modern").tag("Modern")
+                        Text("Classic").tag("Classic")
+                    }.pickerStyle(.segmented).frame(width: 700).accessibilityIdentifier("HomescreenLayoutPicker")
+                    if homescreenLayout == "Modern" {
+                        Text("Navigation").font(.headline).foregroundStyle(.secondary)
+                        Picker("Modern Navigation", selection: $modernNavigation) {
+                            Text("Topbar").tag("Topbar")
+                            Text("Sidebar").tag("Sidebar")
+                        }.pickerStyle(.segmented).frame(width: 700).accessibilityIdentifier("ModernNavigationPicker")
+                    }
+                }.padding(32).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 24))
+                Toggle("Display 4K UHD category", isOn: $display4KUHDCategory)
+                    .accessibilityIdentifier("Display4KUHDCategoryToggle")
                 Text("Playback automatically selects the best available quality, including 4K HDR when available. Live channel quality adapts to the stream BBC supplies.").foregroundStyle(.secondary)
                 NavigationLink {
                     RegionSelectionView(title: "BBC One region", choices: RegionalChannels.bbcOne, selection: $bbcOne)
@@ -522,5 +924,14 @@ private struct RegionSelectionView: View {
                 }.padding(12)
             }
         }.padding(60)
+        .onExitCommand { dismiss() }
+    }
+}
+
+private struct RootBackAction: ViewModifier {
+    let active: Bool
+    let action: () -> Void
+    @ViewBuilder func body(content: Content) -> some View {
+        if active { content.onExitCommand(perform: action) } else { content }
     }
 }

@@ -22,7 +22,7 @@ For public distribution, build in a neutral path outside your personal account d
 python3 scripts/check-unsigned-ipa.py build/BeebHD-unsigned.ipa
 ```
 
-The prebuilt release asset is named Beeb-0.10.7-public-unsigned.ipa and is distributed separately from the source ZIP with a SHA-256 checksum. The structural check cannot detect every possible identifying string; perform an additional private-identifier audit before publishing.
+The prebuilt release asset is named Beeb-0.10.8-public-unsigned.ipa and is distributed separately from the source ZIP with a SHA-256 checksum. The structural check cannot detect every possible identifying string; perform an additional private-identifier audit before publishing.
 
 ## Signed archive
 
@@ -44,6 +44,8 @@ Keep generated archives and signing profiles out of the public repository.
 ./test-catalogue.sh
 ./test-uhd.sh
 ./test-dash.sh
+./test-live-channels.sh
+./test-live-uhd.sh
 python3 Tests/test_public_release.py
 .venv-setup/bin/python Tests/test_setup_helper.py
 ```

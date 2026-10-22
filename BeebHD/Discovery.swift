@@ -179,7 +179,7 @@ struct DiscoveryAPI {
                 for url in selector.urls {
                     let manifest = String(decoding: try await fetch(url), as: UTF8.self)
                     if manifest.hasPrefix("#EXTM3U"), !BBCService.variants(manifest, base: url).isEmpty {
-                        return PlaybackSource(url: url, requested1080: false)
+                        return PlaybackSource(url: url, requested1080: false, liveCaptionTemplates: selector.liveCaptionTemplates)
                     }
                 }
                 if let message = selector.error { throw BBCError.message(message) }

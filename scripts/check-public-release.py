@@ -6,7 +6,7 @@ import struct
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDED = {'.git', 'build', 'dist', '__pycache__', '.venv-setup', '.venv'}
+EXCLUDED = {'.git', 'build', 'dist', '__pycache__', '.venv-setup', '.venv', '__MACOSX'}
 SUFFIXES = {'.swift', '.plist', '.entitlements', '.pbxproj', '.xcscheme',
             '.xcworkspacedata', '.png', '.md', '.txt', '.py', '.sh', '.command', '.json'}
 ROOT_NAMES = {'.gitignore', '.gitattributes'}
@@ -22,7 +22,7 @@ PATTERNS = {
 def source_files(root=ROOT):
     for path in sorted(root.rglob('*')):
         relative = path.relative_to(root)
-        if path.name == '.DS_Store':
+        if path.name == '.DS_Store' or any(part.startswith('._') for part in relative.parts):
             continue
         if any(part in EXCLUDED or part.startswith('.venv') for part in relative.parts):
             continue

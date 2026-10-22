@@ -31,6 +31,9 @@ class ReleaseTests(unittest.TestCase):
                 path.write_text('excluded synthetic data')
             (root / 'README.md').write_text('public documentation')
             (root / '.DS_Store').write_bytes(b'synthetic Finder metadata')
+            (root / '._README.md').write_bytes(b'synthetic AppleDouble metadata')
+            (root / '__MACOSX').mkdir()
+            (root / '__MACOSX/._README.md').write_bytes(b'synthetic archive metadata')
             self.assertEqual([p.name for p in check.source_files(root)], ['README.md'])
 
     def test_symlinks_cannot_import_external_files(self):
